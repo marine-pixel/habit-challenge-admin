@@ -150,12 +150,12 @@ function TargetSection() {
   const targets = [
     {
       num: '01',
-      title: '블로그 수익화 시작이 막막한 분들',
+      title: '블로그 수익화 시작이 막막한 분',
       desc: '어떤 글을, 어떻게 써야지 수익화를 할 수 있는지 알고 싶다면 초보자 자료부터 차근차근 따라해 보세요.',
     },
     {
       num: '02',
-      title: '1일 1포 하는데도 수익이 계속 0원인 분',
+      title: '수익이 계속 0원인 분',
       desc: '콘텐츠 피드백을 통해 어떻게 써야 사람들이 클릭하고 구매하는지 방향을 다시 잡아드립니다.',
     },
     {
@@ -250,7 +250,7 @@ function BenefitsSection() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
       ),
-      title: '전용 단톡방에서 질문 가능',
+      title: '전용 단톡방 운영',
       points: ['글 쓰다가 생기는 고민을 그때그때 해결', '혼자 고민하느라 시간 낭비하지 않기'],
     },
     {
@@ -278,7 +278,7 @@ function BenefitsSection() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-14">
           <SectionBadge>혜택</SectionBadge>
-          <SectionTitle>혼자 고민하지 않게,{'\n'}이렇게 도와드려요</SectionTitle>
+          <SectionTitle>피드백+강의+질문으로 &lsquo;잘 쓰는 루틴&rsquo;을 만들어요</SectionTitle>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
@@ -304,7 +304,7 @@ function BenefitsSection() {
         </div>
 
         {/* Reward cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-8">
           <div className="flex items-center gap-5 bg-[#FF7789]/8 border border-[#FF7789]/20 rounded-2xl px-7 py-6">
             <span className="text-3xl flex-shrink-0">🎁</span>
             <div>
@@ -319,6 +319,15 @@ function BenefitsSection() {
               <p className="text-lg font-bold text-[#FF7789]">주간 리워드 매주 랜덤 지급</p>
             </div>
           </div>
+        </div>
+
+        <div className="text-center">
+          <a
+            href="#apply"
+            className="inline-flex items-center justify-center bg-[#FF7789] text-white px-10 py-4 rounded-full font-bold text-base hover:bg-[#ff5f72] transition-all duration-200 shadow-lg shadow-[#FF7789]/25"
+          >
+            1분 만에 신청하기 →
+          </a>
         </div>
       </div>
     </section>
@@ -348,15 +357,15 @@ function HowToSection() {
           <SectionTitle>3주 동안 딱 이것만 하면 돼요.</SectionTitle>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {steps.map((s, i) => (
             <div key={i} className="relative">
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 hover:shadow-md transition-shadow duration-200 h-full">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-8 h-8 rounded-full bg-[#28B8D1] text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 hover:shadow-md transition-shadow duration-200 h-full">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-9 h-9 rounded-full bg-[#28B8D1] text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
                     {s.num}
                   </div>
-                  <h3 className="font-bold text-[#1a1a2e] text-base leading-snug">{s.title}</h3>
+                  <h3 className="font-bold text-[#1a1a2e] text-lg leading-snug">{s.title}</h3>
                 </div>
                 <p className="text-gray-400 text-sm leading-relaxed">{s.desc}</p>
               </div>
@@ -411,7 +420,7 @@ function ReviewsSection() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-14">
           <SectionBadge>참여자 후기</SectionBadge>
-          <SectionTitle>혼자였다면 멈췄을 순간,{'\n'}함께라서 이어졌어요</SectionTitle>
+          <SectionTitle>참여 후 이렇게 달라졌어요</SectionTitle>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-12">

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 const classOptions = [
-  { label: '베이직반 : 매주 3건 작성(수익화 콘텐츠 1건 포함)', value: '베이직반' },
+  { label: '베이직반 : 매주 3건 작성 (수익화 콘텐츠 1건 포함)', value: '베이직반' },
   { label: '부스터반 : 매주 5건 작성 (수익화 콘텐츠 1건 포함)', value: '부스터반' },
 ];
 
