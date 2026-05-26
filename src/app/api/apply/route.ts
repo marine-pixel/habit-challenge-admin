@@ -57,16 +57,6 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: '서버 환경변수가 설정되지 않았습니다.' }, { status: 500 });
   }
 
-  const { data: existing } = await supabase
-    .from('applicants')
-    .select('aid')
-    .eq('aid', aid)
-    .maybeSingle();
-
-  if (existing) {
-    return Response.json({ error: '이미 신청된 AID입니다.' }, { status: 409 });
-  }
-
   const { error } = await supabase.from('applicants').insert({
     aid,
     nickname,
@@ -78,6 +68,7 @@ export async function POST(request: NextRequest) {
     personal_goal,
     goal: goal ?? null,
     privacy_agreed,
+    status: 'applied',
   });
 
   if (error) {
