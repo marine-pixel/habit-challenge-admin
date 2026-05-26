@@ -17,6 +17,7 @@ interface Applicant {
   personal_goal: number | null;
   goal: string | null;
   privacy_agreed: boolean | null;
+  is_overseas_resident: boolean | null;
   status: Status | null;
   memo: string | null;
   created_at: string;
@@ -31,6 +32,7 @@ interface FormValues {
   class_type: string;
   status: string;
   memo: string;
+  is_overseas_resident: boolean;
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -60,6 +62,7 @@ const EMPTY_FORM: FormValues = {
   class_type: '',
   status: 'applied',
   memo: '',
+  is_overseas_resident: false,
 };
 
 function formatDate(dateStr: string) {
@@ -303,6 +306,7 @@ export default function ApplicantsPage() {
       class_type: applicant.class_type ?? '',
       status: applicant.status ?? 'applied',
       memo: applicant.memo ?? '',
+      is_overseas_resident: applicant.is_overseas_resident ?? false,
     });
     setFormError(null);
     setEditingId(applicant.id);
@@ -317,7 +321,9 @@ export default function ApplicantsPage() {
   const handleFormChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
-    setFormValues(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const target = e.target as HTMLInputElement;
+    const val: unknown = target.type === 'checkbox' ? target.checked : target.value;
+    setFormValues(prev => ({ ...prev, [target.name]: val } as FormValues));
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -355,7 +361,7 @@ export default function ApplicantsPage() {
   const downloadCSV = () => {
     const headers = [
       'AID', '이름', '이메일', '휴대폰', '블로그 URL',
-      '참여 반', '전체 글 목표', '제휴링크 콘텐츠 목표', '상태', '메모', '신청일',
+      '참여 반', '전체 글 목표', '제휴링크 콘텐츠 목표', '상태', '해외거주', '메모', '신청일',
     ];
     const rows = filtered.map(a => [
       a.aid ?? '',
@@ -367,6 +373,7 @@ export default function ApplicantsPage() {
       String(a.writing_goal ?? ''),
       String(a.personal_goal ?? ''),
       STATUS_LABELS[a.status ?? ''] ?? '',
+      a.is_overseas_resident ? 'Y' : 'N',
       a.memo ?? '',
       formatDate(a.created_at),
     ]);
@@ -588,6 +595,7 @@ export default function ApplicantsPage() {
                   <th className="px-3 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wide" title="전체 글 목표">글 목표</th>
                   <th className="px-3 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wide" title="제휴링크 콘텐츠 목표">제휴 목표</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">상태</th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wide" title="해외 거주/체류 여부">해외</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">메모</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">신청일</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">수정</th>
@@ -596,7 +604,7 @@ export default function ApplicantsPage() {
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={13} className="text-center py-14 text-gray-300 text-sm">
+                    <td colSpan={14} className="text-center py-14 text-gray-300 text-sm">
                       신청자가 없습니다.
                     </td>
                   </tr>
@@ -690,6 +698,17 @@ export default function ApplicantsPage() {
                             <option value="paid">입금완료</option>
                             <option value="cancelled">취소</option>
                           </select>
+                        </td>
+
+                        {/* 해외 거주/체류 */}
+                        <td className="px-3 py-3 text-center">
+                          {a.is_overseas_resident ? (
+                            <span className="inline-flex items-center text-[10px] bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full font-semibold">
+                              해외
+                            </span>
+                          ) : (
+                            <span className="text-gray-300">-</span>
+                          )}
                         </td>
 
                         <td className="px-3 py-3 text-gray-500 max-w-[180px] truncate" title={a.memo ?? ''}>
@@ -866,6 +885,23 @@ export default function ApplicantsPage() {
                   <option value="paid">입금완료</option>
                   <option value="cancelled">취소</option>
                 </select>
+              </div>
+
+              {/* Overseas */}
+              <div className="bg-gray-50 rounded-xl p-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="is_overseas_resident"
+                    checked={formValues.is_overseas_resident}
+                    onChange={handleFormChange}
+                    className="w-4 h-4 rounded border-gray-300 accent-[#28B8D1] cursor-pointer flex-shrink-0"
+                  />
+                  <span className="text-sm text-gray-600">
+                    <span className="font-semibold text-[#1a1a2e]">해외 거주/체류 여부</span>
+                    <span className="ml-1 text-xs text-gray-400">— 이메일 추가 발송 대상</span>
+                  </span>
+                </label>
               </div>
 
               {/* Memo */}

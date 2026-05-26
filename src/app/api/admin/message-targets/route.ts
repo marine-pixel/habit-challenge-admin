@@ -12,6 +12,7 @@ interface Applicant {
   class_type: string | null;
   writing_goal: number | null;
   personal_goal: number | null;
+  is_overseas_resident: boolean | null;
   status: 'applied' | 'paid' | 'cancelled' | null;
 }
 
@@ -34,6 +35,7 @@ export interface TargetPerson {
   email: string | null;
   phone: string | null;
   class_type: string | null;
+  is_overseas_resident: boolean | null;
   status: 'applied' | 'paid' | 'cancelled' | null;
   week: number | null;
   approvedCount: number;
@@ -84,6 +86,7 @@ function toTargetPerson(a: Applicant, lov?: LovableEntry): TargetPerson {
     email: a.email,
     phone: a.phone,
     class_type: a.class_type,
+    is_overseas_resident: a.is_overseas_resident ?? null,
     status: a.status,
     week: lov?.week ?? null,
     approvedCount: lov?.approvedCount ?? 0,
@@ -111,7 +114,7 @@ export async function GET(request: NextRequest) {
 
     const { data: rawApplicants, error: appError } = await supabase
       .from('applicants')
-      .select('id, aid, nickname, email, phone, class_type, writing_goal, personal_goal, status')
+      .select('id, aid, nickname, email, phone, class_type, writing_goal, personal_goal, is_overseas_resident, status')
       .order('created_at', { ascending: false });
 
     if (appError) return Response.json({ error: appError.message }, { status: 500 });

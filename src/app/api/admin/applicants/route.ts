@@ -25,7 +25,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json() as Record<string, unknown>;
-    const { aid, nickname, email, phone, blog_url, class_type, status, memo } = body as {
+    const { aid, nickname, email, phone, blog_url, class_type, status, memo, is_overseas_resident } = body as {
       aid?: string;
       nickname?: string;
       email?: string;
@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       class_type?: string;
       status?: string;
       memo?: string;
+      is_overseas_resident?: boolean;
     };
 
     if (!email) {
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
         class_type: class_type || null,
         writing_goal,
         personal_goal,
+        is_overseas_resident: is_overseas_resident ?? false,
         status: status || 'applied',
         memo: memo || null,
       })

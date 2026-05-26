@@ -3,8 +3,8 @@
 import { useState } from 'react';
 
 const classOptions = [
-  { label: '베이직반 (매주 3건 작성)', value: '베이직반' },
-  { label: '부스터반 (매주 5건 작성)', value: '부스터반' },
+  { label: '베이직반 : 매주 3건 작성(수익화 콘텐츠 1건 포함)', value: '베이직반' },
+  { label: '부스터반 : 매주 5건 작성 (수익화 콘텐츠 1건 포함)', value: '부스터반' },
 ];
 
 interface FormState {
@@ -15,6 +15,7 @@ interface FormState {
   blogUrl: string;
   classType: string;
   agreed: boolean;
+  isOverseas: boolean;
 }
 
 const initialForm: FormState = {
@@ -25,6 +26,7 @@ const initialForm: FormState = {
   blogUrl: '',
   classType: '',
   agreed: false,
+  isOverseas: false,
 };
 
 const inputClass =
@@ -80,6 +82,7 @@ export default function ApplicationForm() {
           class_type: form.classType,
           goal: null,
           privacy_agreed: form.agreed,
+          is_overseas_resident: form.isOverseas,
         }),
       });
 
@@ -118,9 +121,10 @@ export default function ApplicationForm() {
           {submitSuccess ? (
             <div className="py-10 text-center space-y-3">
               <div className="text-4xl">🎉</div>
-              <p className="text-lg font-bold text-[#1a1a2e]">신청이 완료되었습니다.</p>
-              <p className="text-sm text-gray-500">
-                신청 후 참가비 입금 안내가 별도로 발송됩니다.
+              <p className="text-lg font-bold text-[#1a1a2e]">신청이 완료되었습니다!</p>
+              <p className="text-sm text-gray-500 leading-relaxed">
+                참가비 1만원 입금 안내 메세지가 카카오톡으로 발송됩니다.<br />
+                참가비 입금까지 완료되면 참여가 확정됩니다.
               </p>
             </div>
           ) : (
@@ -128,14 +132,14 @@ export default function ApplicationForm() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-xs font-bold text-[#1a1a2e] mb-2 tracking-wide uppercase">
-                    이름(입금자명과 동일하게) <span className="text-[#FF7789]">*</span>
+                    이름 <span className="text-[#FF7789]">*</span>
                   </label>
                   <input
                     type="text"
                     name="nickname"
                     value={form.nickname}
                     onChange={handleChange}
-                    placeholder="입금자명과 동일하게 입력"
+                    placeholder="이름을 입력해주세요"
                     className={inputClass}
                     required
                   />
@@ -167,7 +171,7 @@ export default function ApplicationForm() {
                     name="email"
                     value={form.email}
                     onChange={handleChange}
-                    placeholder="이메일 주소"
+                    placeholder="제출 시스템 접속에 필요한 이메일 주소"
                     className={inputClass}
                     required
                   />
@@ -181,7 +185,7 @@ export default function ApplicationForm() {
                     name="phone"
                     value={form.phone}
                     onChange={handleChange}
-                    placeholder="010-0000-0000"
+                    placeholder="입금 정보를 전달받을 휴대폰 번호"
                     className={inputClass}
                     required
                   />
@@ -204,9 +208,12 @@ export default function ApplicationForm() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#1a1a2e] mb-2 tracking-wide uppercase">
-                  참여 반 선택 <span className="text-[#FF7789]">*</span>
+                <label className="block text-xs font-bold text-[#1a1a2e] mb-1 tracking-wide uppercase">
+                  참여반 선택 <span className="text-[#FF7789]">*</span>
                 </label>
+                <p className="text-xs text-gray-400 mb-2 leading-relaxed">
+                  내가 매주 쓸 수 있는 수량을 기준으로 선택해 주세요(제공자료, 혜택 모두 동일)
+                </p>
                 <div className="relative">
                   <select
                     name="classType"
@@ -228,9 +235,26 @@ export default function ApplicationForm() {
                     </svg>
                   </div>
                 </div>
-                <p className="mt-2 text-xs text-gray-400 leading-relaxed">
-                  혜택은 모두 동일합니다. 내가 매주 쓸 수 있는 수량을 기준으로 선택해주세요.
-                </p>
+              </div>
+
+              {/* 해외 체류/거주자 체크박스 */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="isOverseas"
+                    checked={form.isOverseas}
+                    onChange={handleChange}
+                    className="mt-0.5 w-4 h-4 rounded border-gray-300 accent-[#28B8D1] cursor-pointer flex-shrink-0"
+                  />
+                  <span className="text-sm text-gray-600 leading-relaxed">
+                    <span className="font-semibold text-[#1a1a2e]">해외 체류, 거주자인 경우 체크해주세요.</span>
+                    <br />
+                    <span className="text-xs text-gray-400">
+                      안내 메세지가 모두 이메일로도 추가 발송됩니다.
+                    </span>
+                  </span>
+                </label>
               </div>
 
               <div className="bg-gray-50 rounded-xl p-4">
@@ -266,10 +290,6 @@ export default function ApplicationForm() {
               >
                 {isSubmitting ? '제출 중...' : '신청서 제출하기 →'}
               </button>
-
-              <p className="text-center text-xs text-gray-400">
-                신청 후 참가비 입금 안내가 별도로 발송됩니다
-              </p>
             </form>
           )}
         </div>

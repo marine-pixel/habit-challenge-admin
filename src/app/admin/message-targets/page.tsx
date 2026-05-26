@@ -31,6 +31,7 @@ interface TargetPerson {
   email: string | null;
   phone: string | null;
   class_type: string | null;
+  is_overseas_resident: boolean | null;
   status: 'applied' | 'paid' | 'cancelled' | null;
   week: number | null;
   approvedCount: number;
@@ -589,7 +590,7 @@ export default function MessageTargetsPage() {
                       </th>
                       {[
                         'AID', '이름', '이메일', '휴대폰',
-                        '참여반', '상태', '주차', '제출', '제휴', '마지막 제출일',
+                        '참여반', '이메일추가', '상태', '주차', '제출', '제휴', '마지막 제출일',
                       ].map(col => (
                         <th
                           key={col}
@@ -656,6 +657,17 @@ export default function MessageTargetsPage() {
                           {/* 참여반 */}
                           <td className="px-4 py-3 text-xs text-gray-600">
                             {t.class_type || '-'}
+                          </td>
+
+                          {/* 이메일 추가 발송 여부 */}
+                          <td className="px-4 py-3 text-center">
+                            {t.is_overseas_resident ? (
+                              <span className="inline-flex items-center text-[10px] bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full font-semibold whitespace-nowrap">
+                                이메일 추가
+                              </span>
+                            ) : (
+                              <span className="text-gray-300 text-xs">-</span>
+                            )}
                           </td>
 
                           {/* 상태 */}
