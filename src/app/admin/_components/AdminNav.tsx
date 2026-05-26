@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 const NAV_ITEMS = [
   { label: '신청자 관리', href: '/admin/applicants' },
@@ -13,6 +14,16 @@ const NAV_ITEMS = [
 
 export default function AdminNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  if (pathname === '/admin/login') return null;
+
+  async function handleLogout() {
+    setLoggingOut(true);
+    await fetch('/api/admin/logout', { method: 'POST' });
+    router.replace('/admin/login');
+  }
 
   return (
     <nav className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-40">
@@ -33,7 +44,7 @@ export default function AdminNav() {
 
           {/* Nav items */}
           <div
-            className="flex items-center gap-0.5 overflow-x-auto pb-2.5 sm:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="flex items-center gap-0.5 overflow-x-auto pb-2.5 sm:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex-1"
           >
             {NAV_ITEMS.map(({ label, href }) => {
               const isActive =
@@ -54,6 +65,15 @@ export default function AdminNav() {
               );
             })}
           </div>
+
+          {/* Logout */}
+          <button
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="hidden sm:flex flex-shrink-0 items-center px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50"
+          >
+            로그아웃
+          </button>
         </div>
       </div>
     </nav>
