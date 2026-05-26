@@ -2,10 +2,14 @@ import { createClient } from '@supabase/supabase-js';
 import type { NextRequest } from 'next/server';
 
 function createSupabaseClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !serviceRoleKey) {
+    throw new Error('서버 환경변수가 설정되지 않았습니다.');
+  }
+
+  return createClient(url, serviceRoleKey);
 }
 
 export async function POST(request: NextRequest) {
@@ -46,7 +50,12 @@ export async function POST(request: NextRequest) {
   const writing_goal = class_type === '베이직반' ? 3 : 5;
   const personal_goal = 1;
 
-  const supabase = createSupabaseClient();
+  let supabase: ReturnType<typeof createSupabaseClient>;
+  try {
+    supabase = createSupabaseClient();
+  } catch {
+    return Response.json({ error: '서버 환경변수가 설정되지 않았습니다.' }, { status: 500 });
+  }
 
   const { data: existing } = await supabase
     .from('applicants')
