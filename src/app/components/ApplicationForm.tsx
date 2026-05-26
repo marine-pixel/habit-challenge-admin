@@ -2,37 +2,39 @@
 
 import { useState } from 'react';
 
-const goalOptions = [
-  '수익화 글 꾸준히 발행하기',
-  '첫 제휴 판매 경험하기',
-  '블로그 방문자 늘리기',
-  '글쓰기 루틴 만들기',
-  '기타',
+const classOptions = [
+  { label: '베이직반 (매주 3건 작성)', value: '베이직반' },
+  { label: '부스터반 (매주 5건 작성)', value: '부스터반' },
 ];
 
 interface FormState {
-  name: string;
+  nickname: string;
   aid: string;
   email: string;
   phone: string;
   blogUrl: string;
-  goal: string;
+  classType: string;
   agreed: boolean;
 }
+
+const initialForm: FormState = {
+  nickname: '',
+  aid: '',
+  email: '',
+  phone: '',
+  blogUrl: '',
+  classType: '',
+  agreed: false,
+};
 
 const inputClass =
   'w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#28B8D1]/30 focus:border-[#28B8D1] transition-all text-sm text-[#1a1a2e] placeholder:text-gray-400';
 
 export default function ApplicationForm() {
-  const [form, setForm] = useState<FormState>({
-    name: '',
-    aid: '',
-    email: '',
-    phone: '',
-    blogUrl: '',
-    goal: '',
-    agreed: false,
-  });
+  const [form, setForm] = useState<FormState>(initialForm);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -44,9 +46,57 @@ export default function ApplicationForm() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert('신청 기능은 다음 단계에서 연결됩니다.');
+    setErrorMessage('');
+
+    if (!/^\d{6}$/.test(form.aid)) {
+      setErrorMessage('AID는 숫자 6자리를 입력해주세요.');
+      return;
+    }
+
+    if (!form.classType) {
+      setErrorMessage('참여 반을 선택해주세요.');
+      return;
+    }
+
+    if (!form.agreed) {
+      setErrorMessage('개인정보 수집 및 이용에 동의해주세요.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const res = await fetch('/api/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          aid: form.aid,
+          nickname: form.nickname,
+          email: form.email,
+          phone: form.phone,
+          blog_url: form.blogUrl,
+          class_type: form.classType,
+          goal: null,
+          privacy_agreed: form.agreed,
+        }),
+      });
+
+      const data = (await res.json()) as { error?: string };
+
+      if (!res.ok) {
+        setErrorMessage(data.error ?? '신청 중 오류가 발생했습니다. 다시 시도해주세요.');
+        return;
+      }
+
+      setForm(initialForm);
+      setSubmitSuccess(true);
+    } catch {
+      setErrorMessage('네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -65,141 +115,163 @@ export default function ApplicationForm() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-xs font-bold text-[#1a1a2e] mb-2 tracking-wide uppercase">
-                  이름 / 닉네임 <span className="text-[#FF7789]">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={form.name}
-                  onChange={handleChange}
-                  placeholder="이름 또는 닉네임"
-                  className={inputClass}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-[#1a1a2e] mb-2 tracking-wide uppercase">
-                  AID / 회원 ID <span className="text-[#FF7789]">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="aid"
-                  value={form.aid}
-                  onChange={handleChange}
-                  placeholder="세시간전 AID 또는 회원 ID"
-                  className={inputClass}
-                  required
-                />
-              </div>
+          {submitSuccess ? (
+            <div className="py-10 text-center space-y-3">
+              <div className="text-4xl">🎉</div>
+              <p className="text-lg font-bold text-[#1a1a2e]">신청이 완료되었습니다.</p>
+              <p className="text-sm text-gray-500">
+                신청 후 참가비 입금 안내가 별도로 발송됩니다.
+              </p>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-xs font-bold text-[#1a1a2e] mb-2 tracking-wide uppercase">
-                  이메일 <span className="text-[#FF7789]">*</span>
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  placeholder="이메일 주소"
-                  className={inputClass}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-[#1a1a2e] mb-2 tracking-wide uppercase">
-                  휴대폰 번호 <span className="text-[#FF7789]">*</span>
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={form.phone}
-                  onChange={handleChange}
-                  placeholder="010-0000-0000"
-                  className={inputClass}
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-[#1a1a2e] mb-2 tracking-wide uppercase">
-                블로그 URL <span className="text-[#FF7789]">*</span>
-              </label>
-              <input
-                type="url"
-                name="blogUrl"
-                value={form.blogUrl}
-                onChange={handleChange}
-                placeholder="https://blog.naver.com/..."
-                className={inputClass}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-[#1a1a2e] mb-2 tracking-wide uppercase">
-                참여 목표
-              </label>
-              <div className="relative">
-                <select
-                  name="goal"
-                  value={form.goal}
-                  onChange={handleChange}
-                  className={`${inputClass} appearance-none cursor-pointer`}
-                >
-                  <option value="">목표를 선택해주세요</option>
-                  {goalOptions.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-xs font-bold text-[#1a1a2e] mb-2 tracking-wide uppercase">
+                    이름(입금자명과 동일하게) <span className="text-[#FF7789]">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="nickname"
+                    value={form.nickname}
+                    onChange={handleChange}
+                    placeholder="입금자명과 동일하게 입력"
+                    className={inputClass}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-[#1a1a2e] mb-2 tracking-wide uppercase">
+                    세시간전 AID <span className="text-[#FF7789]">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="aid"
+                    value={form.aid}
+                    onChange={handleChange}
+                    placeholder="숫자 6자리"
+                    maxLength={6}
+                    className={inputClass}
+                    required
+                  />
                 </div>
               </div>
-            </div>
 
-            <div className="bg-gray-50 rounded-xl p-4">
-              <label className="flex items-start gap-3 cursor-pointer">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-xs font-bold text-[#1a1a2e] mb-2 tracking-wide uppercase">
+                    이메일 <span className="text-[#FF7789]">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    placeholder="이메일 주소"
+                    className={inputClass}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-[#1a1a2e] mb-2 tracking-wide uppercase">
+                    휴대폰 번호 <span className="text-[#FF7789]">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={form.phone}
+                    onChange={handleChange}
+                    placeholder="010-0000-0000"
+                    className={inputClass}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#1a1a2e] mb-2 tracking-wide uppercase">
+                  블로그 URL <span className="text-[#FF7789]">*</span>
+                </label>
                 <input
-                  type="checkbox"
-                  name="agreed"
-                  checked={form.agreed}
+                  type="url"
+                  name="blogUrl"
+                  value={form.blogUrl}
                   onChange={handleChange}
-                  className="mt-0.5 w-4 h-4 rounded border-gray-300 accent-[#28B8D1] cursor-pointer flex-shrink-0"
+                  placeholder="https://blog.naver.com/..."
+                  className={inputClass}
                   required
                 />
-                <span className="text-sm text-gray-600 leading-relaxed">
-                  <span className="font-semibold text-[#1a1a2e]">개인정보 수집 및 이용에 동의합니다.</span>
-                  <br />
-                  <span className="text-xs text-gray-400">
-                    이름, 이메일, 연락처는 챌린지 운영 목적으로만 사용되며, 종료 후 파기됩니다.
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#1a1a2e] mb-2 tracking-wide uppercase">
+                  참여 반 선택 <span className="text-[#FF7789]">*</span>
+                </label>
+                <div className="relative">
+                  <select
+                    name="classType"
+                    value={form.classType}
+                    onChange={handleChange}
+                    className={`${inputClass} appearance-none cursor-pointer`}
+                    required
+                  >
+                    <option value="">반을 선택해주세요</option>
+                    {classOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-gray-400 leading-relaxed">
+                  혜택은 모두 동일합니다. 내가 매주 쓸 수 있는 수량을 기준으로 선택해주세요.
+                </p>
+              </div>
+
+              <div className="bg-gray-50 rounded-xl p-4">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="agreed"
+                    checked={form.agreed}
+                    onChange={handleChange}
+                    className="mt-0.5 w-4 h-4 rounded border-gray-300 accent-[#28B8D1] cursor-pointer flex-shrink-0"
+                    required
+                  />
+                  <span className="text-sm text-gray-600 leading-relaxed">
+                    <span className="font-semibold text-[#1a1a2e]">개인정보 수집 및 이용에 동의합니다.</span>
+                    <br />
+                    <span className="text-xs text-gray-400">
+                      이름, 이메일, 연락처는 챌린지 운영 목적으로만 사용되며, 종료 후 파기됩니다.
+                    </span>
                   </span>
-                </span>
-              </label>
-            </div>
+                </label>
+              </div>
 
-            <button
-              type="submit"
-              className="w-full bg-[#FF7789] text-white py-4 rounded-xl font-bold text-base hover:bg-[#ff5f72] active:scale-[0.99] transition-all duration-200 shadow-lg shadow-[#FF7789]/25 mt-2"
-            >
-              신청서 제출하기 →
-            </button>
+              {errorMessage && (
+                <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
+                  {errorMessage}
+                </div>
+              )}
 
-            <p className="text-center text-xs text-gray-400">
-              신청 후 참가비 입금 안내가 별도로 발송됩니다
-            </p>
-          </form>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-[#FF7789] text-white py-4 rounded-xl font-bold text-base hover:bg-[#ff5f72] active:scale-[0.99] transition-all duration-200 shadow-lg shadow-[#FF7789]/25 mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? '제출 중...' : '신청서 제출하기 →'}
+              </button>
+
+              <p className="text-center text-xs text-gray-400">
+                신청 후 참가비 입금 안내가 별도로 발송됩니다
+              </p>
+            </form>
+          )}
         </div>
       </div>
     </section>
