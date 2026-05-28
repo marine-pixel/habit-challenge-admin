@@ -25,6 +25,7 @@ export async function PATCH(
       status?: string;
       memo?: string;
       is_overseas_resident?: boolean;
+      is_first_time?: boolean;
     };
 
     if ('email' in body && !body.email) {
@@ -41,6 +42,7 @@ export async function PATCH(
     if ('status' in body) updateData.status = body.status;
     if ('memo' in body) updateData.memo = body.memo || null;
     if ('is_overseas_resident' in body) updateData.is_overseas_resident = body.is_overseas_resident ?? false;
+    if ('is_first_time' in body) updateData.is_first_time = body.is_first_time ?? false;
     if ('class_type' in body) {
       updateData.class_type = body.class_type || null;
       if (body.class_type === '베이직반') {

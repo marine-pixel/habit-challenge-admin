@@ -16,6 +16,7 @@ interface FormState {
   classType: string;
   agreed: boolean;
   isOverseas: boolean;
+  isFirstTime: boolean;
 }
 
 const initialForm: FormState = {
@@ -27,6 +28,7 @@ const initialForm: FormState = {
   classType: '',
   agreed: false,
   isOverseas: false,
+  isFirstTime: false,
 };
 
 const inputClass =
@@ -83,6 +85,7 @@ export default function ApplicationForm() {
           goal: null,
           privacy_agreed: form.agreed,
           is_overseas_resident: form.isOverseas,
+          is_first_time: form.isFirstTime,
         }),
       });
 
@@ -235,6 +238,23 @@ export default function ApplicationForm() {
                     </svg>
                   </div>
                 </div>
+              </div>
+
+              {/* 첫 참여 여부 */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <p className="text-xs font-bold text-[#1a1a2e] mb-2 tracking-wide uppercase">
+                  습관챌린지 첫 참여인가요?
+                </p>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="isFirstTime"
+                    checked={form.isFirstTime}
+                    onChange={handleChange}
+                    className="w-4 h-4 rounded border-gray-300 accent-[#28B8D1] cursor-pointer flex-shrink-0"
+                  />
+                  <span className="text-sm text-gray-700 font-medium">처음 참여해요!</span>
+                </label>
               </div>
 
               {/* 해외 체류/거주자 체크박스 */}

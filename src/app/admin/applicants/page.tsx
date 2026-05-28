@@ -18,6 +18,7 @@ interface Applicant {
   goal: string | null;
   privacy_agreed: boolean | null;
   is_overseas_resident: boolean | null;
+  is_first_time: boolean | null;
   status: Status | null;
   memo: string | null;
   created_at: string;
@@ -33,6 +34,7 @@ interface FormValues {
   status: string;
   memo: string;
   is_overseas_resident: boolean;
+  is_first_time: boolean;
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -63,6 +65,7 @@ const EMPTY_FORM: FormValues = {
   status: 'applied',
   memo: '',
   is_overseas_resident: false,
+  is_first_time: false,
 };
 
 function formatDate(dateStr: string) {
@@ -307,6 +310,7 @@ export default function ApplicantsPage() {
       status: applicant.status ?? 'applied',
       memo: applicant.memo ?? '',
       is_overseas_resident: applicant.is_overseas_resident ?? false,
+      is_first_time: applicant.is_first_time ?? false,
     });
     setFormError(null);
     setEditingId(applicant.id);
@@ -361,7 +365,7 @@ export default function ApplicantsPage() {
   const downloadCSV = () => {
     const headers = [
       'AID', '이름', '이메일', '휴대폰', '블로그 URL',
-      '참여 반', '전체 글 목표', '제휴링크 콘텐츠 목표', '상태', '해외거주', '메모', '신청일',
+      '참여 반', '전체 글 목표', '제휴링크 콘텐츠 목표', '상태', '해외거주', '첫 참여 여부', '메모', '신청일',
     ];
     const rows = filtered.map(a => [
       a.aid ?? '',
@@ -374,6 +378,7 @@ export default function ApplicantsPage() {
       String(a.personal_goal ?? ''),
       STATUS_LABELS[a.status ?? ''] ?? '',
       a.is_overseas_resident ? 'Y' : 'N',
+      a.is_first_time ? '첫 참여' : '기존/미체크',
       a.memo ?? '',
       formatDate(a.created_at),
     ]);
@@ -596,15 +601,16 @@ export default function ApplicantsPage() {
                   <th className="px-3 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wide" title="제휴링크 콘텐츠 목표">제휴 목표</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">상태</th>
                   <th className="px-3 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wide" title="해외 거주/체류 여부">해외</th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wide" title="첫 참여 여부">첫 참여</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">메모</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">신청일</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">수정</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide sticky right-0 bg-gray-50 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]">수정</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={14} className="text-center py-14 text-gray-300 text-sm">
+                    <td colSpan={15} className="text-center py-14 text-gray-300 text-sm">
                       신청자가 없습니다.
                     </td>
                   </tr>
@@ -711,16 +717,27 @@ export default function ApplicantsPage() {
                           )}
                         </td>
 
+                        {/* 첫 참여 여부 */}
+                        <td className="px-3 py-3 text-center">
+                          {a.is_first_time ? (
+                            <span className="inline-flex items-center text-[10px] bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-semibold">
+                              첫 참여
+                            </span>
+                          ) : (
+                            <span className="text-gray-300">-</span>
+                          )}
+                        </td>
+
                         <td className="px-3 py-3 text-gray-500 max-w-[180px] truncate" title={a.memo ?? ''}>
                           {a.memo ?? <span className="text-gray-300">-</span>}
                         </td>
                         <td className="px-3 py-3 text-gray-400 text-xs">
                           {formatDate(a.created_at)}
                         </td>
-                        <td className="px-3 py-3">
+                        <td className={`px-3 py-3 sticky right-0 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)] ${isSelected ? 'bg-[#eef9fb]' : 'bg-white'}`}>
                           <button
                             onClick={() => openEdit(a)}
-                            className="px-2.5 py-1 text-xs rounded-lg border border-gray-200 text-gray-500 hover:border-[#28B8D1] hover:text-[#28B8D1] transition-colors"
+                            className="px-2.5 py-1 text-xs rounded-lg border border-gray-200 text-gray-500 hover:border-[#28B8D1] hover:text-[#28B8D1] transition-colors whitespace-nowrap"
                           >
                             수정
                           </button>
@@ -885,6 +902,23 @@ export default function ApplicantsPage() {
                   <option value="paid">입금완료</option>
                   <option value="cancelled">취소</option>
                 </select>
+              </div>
+
+              {/* First Time */}
+              <div className="bg-gray-50 rounded-xl p-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="is_first_time"
+                    checked={formValues.is_first_time}
+                    onChange={handleFormChange}
+                    className="w-4 h-4 rounded border-gray-300 accent-[#28B8D1] cursor-pointer flex-shrink-0"
+                  />
+                  <span className="text-sm text-gray-600">
+                    <span className="font-semibold text-[#1a1a2e]">첫 참여 여부</span>
+                    <span className="ml-1 text-xs text-gray-400">— 습관챌린지 첫 참여자인 경우 체크</span>
+                  </span>
+                </label>
               </div>
 
               {/* Overseas */}

@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: '잘못된 요청입니다.' }, { status: 400 });
   }
 
-  const { aid, nickname, email, phone, blog_url, class_type, goal, privacy_agreed, is_overseas_resident } = body as {
+  const { aid, nickname, email, phone, blog_url, class_type, goal, privacy_agreed, is_overseas_resident, is_first_time } = body as {
     aid: string;
     nickname: string;
     email: string;
@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
     goal: string | null;
     privacy_agreed: boolean;
     is_overseas_resident?: boolean;
+    is_first_time?: boolean;
   };
 
   if (!aid || !/^\d{6}$/.test(String(aid))) {
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
       goal: goal ?? null,
       privacy_agreed,
       is_overseas_resident: is_overseas_resident ?? false,
+      is_first_time: is_first_time ?? false,
       status: 'applied',
     })
     .select('id')
