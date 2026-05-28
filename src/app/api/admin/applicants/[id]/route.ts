@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import type { NextRequest } from 'next/server';
+import { sendPaymentCompleteAlimtalk } from '@/lib/alimtalk-notifications';
 
 function adminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -55,6 +56,19 @@ export async function PATCH(
     }
 
     const supabase = adminClient();
+
+    // applied → paid 변경 시 알림톡 발송을 위해 현재 상태 조회
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let previousApplicant: any = null;
+    if (body.status === 'paid') {
+      const { data: current } = await supabase
+        .from('applicants')
+        .select('id, status, nickname, aid, email, phone, blog_url, class_type, writing_goal, personal_goal, is_overseas_resident')
+        .eq('id', id)
+        .single();
+      previousApplicant = current;
+    }
+
     const { data, error } = await supabase
       .from('applicants')
       .update(updateData)
@@ -63,6 +77,16 @@ export async function PATCH(
       .single();
 
     if (error) return Response.json({ error: error.message }, { status: 500 });
+
+    // applied에서 paid로 변경된 경우에만 입금 완료 알림톡 발송
+    if (previousApplicant?.status === 'applied' && body.status === 'paid') {
+      try {
+        await sendPaymentCompleteAlimtalk(supabase, previousApplicant);
+      } catch (err) {
+        console.error('[alimtalk] 입금 완료 알림톡 발송 실패:', err instanceof Error ? err.message : err);
+      }
+    }
+
     return Response.json({ data });
   } catch (e) {
     return Response.json({ error: e instanceof Error ? e.message : '서버 오류' }, { status: 500 });

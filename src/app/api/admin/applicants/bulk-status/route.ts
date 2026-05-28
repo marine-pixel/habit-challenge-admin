@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import type { NextRequest } from 'next/server';
+import { sendPaymentCompleteAlimtalk, type ApplicantForNotification } from '@/lib/alimtalk-notifications';
 
 function adminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -23,12 +24,41 @@ export async function PATCH(request: NextRequest) {
     }
 
     const supabase = adminClient();
+
+    // paid로 변경하는 경우, 현재 applied 상태인 대상자만 조회 (알림톡 발송 대상)
+    let applicantsToNotify: ApplicantForNotification[] = [];
+    if (status === 'paid') {
+      const { data: current } = await supabase
+        .from('applicants')
+        .select('id, nickname, aid, email, phone, blog_url, class_type, writing_goal, personal_goal, is_overseas_resident')
+        .in('id', ids as string[])
+        .eq('status', 'applied');
+      applicantsToNotify = (current ?? []) as ApplicantForNotification[];
+    }
+
     const { error } = await supabase
       .from('applicants')
       .update({ status })
       .in('id', ids as string[]);
 
     if (error) return Response.json({ error: error.message }, { status: 500 });
+
+    // 상태 변경 성공 후, applied → paid 대상자에게 입금 완료 알림톡 발송
+    if (applicantsToNotify.length > 0) {
+      const results = await Promise.allSettled(
+        applicantsToNotify.map((applicant) => sendPaymentCompleteAlimtalk(supabase, applicant))
+      );
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          const applicant = applicantsToNotify[index];
+          console.error(
+            `[alimtalk] 입금 완료 알림톡 발송 실패 (id=${applicant?.id ?? 'unknown'}):`,
+            result.reason instanceof Error ? result.reason.message : result.reason
+          );
+        }
+      });
+    }
+
     return Response.json({ success: true });
   } catch (e) {
     return Response.json({ error: e instanceof Error ? e.message : '서버 오류' }, { status: 500 });
