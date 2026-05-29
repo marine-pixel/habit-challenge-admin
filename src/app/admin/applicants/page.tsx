@@ -85,6 +85,8 @@ export default function ApplicantsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | Status>('all');
   const [classFilter, setClassFilter] = useState('all');
+  const [overseasFilter, setOverseasFilter] = useState<'all' | 'yes' | 'no'>('all');
+  const [firstTimeFilter, setFirstTimeFilter] = useState<'all' | 'yes' | 'no'>('all');
   const [showDuplicates, setShowDuplicates] = useState(false);
 
   // Selection + bulk actions
@@ -159,9 +161,15 @@ export default function ApplicantsPage() {
 
     if (statusFilter !== 'all') list = list.filter(a => a.status === statusFilter);
     if (classFilter !== 'all') list = list.filter(a => a.class_type === classFilter);
+    if (overseasFilter !== 'all') list = list.filter(a =>
+      overseasFilter === 'yes' ? a.is_overseas_resident === true : !a.is_overseas_resident
+    );
+    if (firstTimeFilter !== 'all') list = list.filter(a =>
+      firstTimeFilter === 'yes' ? a.is_first_time === true : !a.is_first_time
+    );
 
     return list;
-  }, [applicants, search, statusFilter, classFilter, showDuplicates, duplicateAids]);
+  }, [applicants, search, statusFilter, classFilter, overseasFilter, firstTimeFilter, showDuplicates, duplicateAids]);
 
   // ── Selection ────────────────────────────────────────────────────────────
   const allSelected = filtered.length > 0 && selectedIds.size === filtered.length;
@@ -500,6 +508,24 @@ export default function ApplicantsPage() {
               <option value="베이직반">베이직반</option>
               <option value="부스터반">부스터반</option>
             </select>
+            <select
+              value={overseasFilter}
+              onChange={e => setOverseasFilter(e.target.value as 'all' | 'yes' | 'no')}
+              className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#28B8D1] bg-white text-gray-600"
+            >
+              <option value="all">해외 전체</option>
+              <option value="yes">해외 체크</option>
+              <option value="no">해외 미체크</option>
+            </select>
+            <select
+              value={firstTimeFilter}
+              onChange={e => setFirstTimeFilter(e.target.value as 'all' | 'yes' | 'no')}
+              className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#28B8D1] bg-white text-gray-600"
+            >
+              <option value="all">첫참여 전체</option>
+              <option value="yes">첫 참여 체크</option>
+              <option value="no">첫 참여 미체크</option>
+            </select>
             <button
               onClick={() => setShowDuplicates(v => !v)}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium border transition-colors ${
@@ -589,26 +615,23 @@ export default function ApplicantsPage() {
                       className="rounded accent-[#28B8D1] cursor-pointer"
                     />
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">AID</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">이름</th>
+                  <th className="px-2 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-24">AID</th>
+                  <th className="px-2 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">이름</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">이메일</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">휴대폰</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">블로그 URL</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">참여 반</th>
-                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wide" title="전체 글 목표">글 목표</th>
-                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wide" title="제휴링크 콘텐츠 목표">제휴 목표</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">상태</th>
                   <th className="px-3 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wide" title="해외 거주/체류 여부">해외</th>
                   <th className="px-3 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wide" title="첫 참여 여부">첫 참여</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">메모</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">신청일시</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide sticky right-0 bg-gray-50 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]">수정</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={15} className="text-center py-14 text-gray-300 text-sm">
+                    <td colSpan={12} className="text-center py-14 text-gray-300 text-sm">
                       신청자가 없습니다.
                     </td>
                   </tr>
@@ -632,9 +655,16 @@ export default function ApplicantsPage() {
                             className="rounded accent-[#28B8D1] cursor-pointer"
                           />
                         </td>
-                        <td className="px-3 py-3">
+                        <td className="px-2 py-3">
                           <div className="flex items-center gap-1.5">
-                            <span className="font-mono text-[#1a1a2e]">{a.aid ?? <span className="text-gray-300">-</span>}</span>
+                            <button
+                              onClick={() => openEdit(a)}
+                              className="font-mono text-[#28B8D1] underline underline-offset-2 cursor-pointer hover:text-[#1fa8bf] transition-colors"
+                              role="button"
+                              aria-label={`${a.aid ?? '-'} 수정`}
+                            >
+                              {a.aid ?? <span className="text-gray-300">-</span>}
+                            </button>
                             {isDup && (
                               <span className="inline-flex text-[10px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full font-semibold leading-tight">
                                 중복 의심
@@ -642,7 +672,7 @@ export default function ApplicantsPage() {
                             )}
                           </div>
                         </td>
-                        <td className="px-3 py-3 font-medium text-[#1a1a2e]">
+                        <td className="px-2 py-3 font-medium text-[#1a1a2e]">
                           {a.nickname ?? <span className="text-gray-300">-</span>}
                         </td>
                         <td className="px-3 py-3 text-gray-500">{a.email}</td>
@@ -679,13 +709,6 @@ export default function ApplicantsPage() {
                             <option value="베이직반">베이직반</option>
                             <option value="부스터반">부스터반</option>
                           </select>
-                        </td>
-
-                        <td className="px-3 py-3 text-center text-gray-600">
-                          {a.writing_goal ?? <span className="text-gray-300">-</span>}
-                        </td>
-                        <td className="px-3 py-3 text-center text-gray-600">
-                          {a.personal_goal ?? <span className="text-gray-300">-</span>}
                         </td>
 
                         {/* ── 상태 인라인 드롭다운 ── */}
@@ -731,14 +754,6 @@ export default function ApplicantsPage() {
                         </td>
                         <td className="px-3 py-3 text-gray-400 text-xs">
                           {formatDateTime(a.created_at)}
-                        </td>
-                        <td className={`px-3 py-3 sticky right-0 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)] ${isSelected ? 'bg-[#eef9fb]' : 'bg-white'}`}>
-                          <button
-                            onClick={() => openEdit(a)}
-                            className="px-2.5 py-1 text-xs rounded-lg border border-gray-200 text-gray-500 hover:border-[#28B8D1] hover:text-[#28B8D1] transition-colors whitespace-nowrap"
-                          >
-                            수정
-                          </button>
                         </td>
                       </tr>
                     );
