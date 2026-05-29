@@ -68,12 +68,10 @@ const EMPTY_FORM: FormValues = {
   is_first_time: false,
 };
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
+function formatDateTime(dateStr: string) {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const kst = new Date(new Date(dateStr).getTime() + 9 * 60 * 60 * 1000);
+  return `${kst.getUTCFullYear()}.${pad(kst.getUTCMonth() + 1)}.${pad(kst.getUTCDate())} ${pad(kst.getUTCHours())}:${pad(kst.getUTCMinutes())}`;
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────
@@ -365,7 +363,7 @@ export default function ApplicantsPage() {
   const downloadCSV = () => {
     const headers = [
       'AID', '이름', '이메일', '휴대폰', '블로그 URL',
-      '참여 반', '전체 글 목표', '제휴링크 콘텐츠 목표', '상태', '해외거주', '첫 참여 여부', '메모', '신청일',
+      '참여 반', '전체 글 목표', '제휴링크 콘텐츠 목표', '상태', '해외거주', '첫 참여 여부', '메모', '신청일시',
     ];
     const rows = filtered.map(a => [
       a.aid ?? '',
@@ -380,7 +378,7 @@ export default function ApplicantsPage() {
       a.is_overseas_resident ? 'Y' : 'N',
       a.is_first_time ? '첫 참여' : '기존/미체크',
       a.memo ?? '',
-      formatDate(a.created_at),
+      formatDateTime(a.created_at),
     ]);
     const csv = [headers, ...rows]
       .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
@@ -603,7 +601,7 @@ export default function ApplicantsPage() {
                   <th className="px-3 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wide" title="해외 거주/체류 여부">해외</th>
                   <th className="px-3 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wide" title="첫 참여 여부">첫 참여</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">메모</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">신청일</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">신청일시</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide sticky right-0 bg-gray-50 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]">수정</th>
                 </tr>
               </thead>
@@ -732,7 +730,7 @@ export default function ApplicantsPage() {
                           {a.memo ?? <span className="text-gray-300">-</span>}
                         </td>
                         <td className="px-3 py-3 text-gray-400 text-xs">
-                          {formatDate(a.created_at)}
+                          {formatDateTime(a.created_at)}
                         </td>
                         <td className={`px-3 py-3 sticky right-0 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)] ${isSelected ? 'bg-[#eef9fb]' : 'bg-white'}`}>
                           <button
