@@ -1,3 +1,4 @@
+import React from 'react';
 import Navbar from './components/Navbar';
 import FAQSection from './components/FAQSection';
 import ApplicationForm from './components/ApplicationForm';
@@ -33,12 +34,21 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 // ─── Hero ──────────────────────────────────────────────────────────
 function HeroSection() {
-  const infoItems = [
+  const infoItems: { icon: string; label: string; value: React.ReactNode }[] = [
     { icon: '⏰', label: '모집 마감', value: '2026.05.31(일) 23:59까지 (추가모집 없음)' },
     { icon: '📅', label: '진행 기간', value: '2026.06.01~06.21' },
     { icon: '🗓', label: '기간', value: '총 3주' },
-    { icon: '💰', label: '참가비', value: '1만원' },
-    { icon: '🎁', label: '완주 혜택', value: '참가비 100% 환급' },
+    {
+      icon: '💰',
+      label: '참가비',
+      value: (
+        <>
+          1만원{' '}
+          <span className="text-red-500 text-xs font-normal">(7월 모집부터 인상 예정)</span>
+        </>
+      ),
+    },
+    { icon: '🎁', label: '완주 혜택', value: '참가비 100% 리워드로 환급' },
   ];
 
   const avatarColors = ['bg-[#28B8D1]', 'bg-[#FF7789]', 'bg-purple-400', 'bg-amber-400'];
@@ -309,7 +319,7 @@ function BenefitsSection() {
             <span className="text-3xl flex-shrink-0">🎁</span>
             <div>
               <p className="text-sm text-gray-400 font-medium mb-1">완주 혜택</p>
-              <p className="text-lg font-bold text-[#FF7789]">참가비 100% 환급</p>
+              <p className="text-lg font-bold text-[#FF7789]">참가비 100% 리워드로 환급</p>
             </div>
           </div>
           <div className="flex items-center gap-5 bg-[#FF7789]/8 border border-[#FF7789]/20 rounded-2xl px-7 py-6">

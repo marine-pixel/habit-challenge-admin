@@ -615,8 +615,8 @@ export default function ApplicantsPage() {
                       className="rounded accent-[#28B8D1] cursor-pointer"
                     />
                   </th>
-                  <th className="px-2 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-24">AID</th>
-                  <th className="px-2 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">이름</th>
+                  <th className="px-2 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-16">AID</th>
+                  <th className="px-2 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-20">이름</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">이메일</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">휴대폰</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">블로그 URL</th>
