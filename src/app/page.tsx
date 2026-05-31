@@ -2,6 +2,8 @@ import React from 'react';
 import Navbar from './components/Navbar';
 import FAQSection from './components/FAQSection';
 import ApplicationForm from './components/ApplicationForm';
+import NextRecruitmentNotificationForm from './components/NextRecruitmentNotificationForm';
+import { getRecruitmentSettings, isRecruitmentOpen } from '@/lib/recruitment';
 
 // ─── Shared helpers ────────────────────────────────────────────────
 function SectionBadge({
@@ -33,7 +35,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 // ─── Hero ──────────────────────────────────────────────────────────
-function HeroSection() {
+function HeroSection({ isOpen }: { isOpen: boolean }) {
   const infoItems: { icon: string; label: string; value: React.ReactNode }[] = [
     { icon: '⏰', label: '모집 마감', value: '2026.05.31(일) 23:59까지 (추가모집 없음)' },
     { icon: '📅', label: '진행 기간', value: '2026.06.01~06.21' },
@@ -103,7 +105,7 @@ function HeroSection() {
                 href="#apply"
                 className="inline-flex items-center justify-center bg-[#FF7789] text-white px-8 py-4 rounded-full font-bold text-base hover:bg-[#ff5f72] transition-all duration-200 shadow-lg shadow-[#FF7789]/25"
               >
-                신청하기 →
+                {isOpen ? '신청하기 →' : '다음 모집 알림 신청하기 →'}
               </a>
               <a
                 href="#benefits"
@@ -119,8 +121,15 @@ function HeroSection() {
             <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 sm:p-8 w-full max-w-sm">
               <div className="flex items-center justify-between mb-6">
                 <p className="font-bold text-[#1a1a2e] text-sm">6월 습관챌린지 일정</p>
-                <span className="bg-[#FF7789]/10 text-[#FF7789] text-xs font-bold px-3 py-1 rounded-full">
-                  모집중
+                <span
+                  className={[
+                    'text-xs font-bold px-3 py-1 rounded-full',
+                    isOpen
+                      ? 'bg-[#FF7789]/10 text-[#FF7789]'
+                      : 'bg-gray-100 text-gray-400',
+                  ].join(' ')}
+                >
+                  {isOpen ? '모집중' : '모집마감'}
                 </span>
               </div>
 
@@ -142,9 +151,14 @@ function HeroSection() {
               <div className="mt-4">
                 <a
                   href="#apply"
-                  className="block w-full text-center bg-[#FF7789] text-white py-3.5 rounded-xl font-bold text-sm hover:bg-[#ff5f72] transition-colors shadow-md shadow-[#FF7789]/20"
+                  className={[
+                    'block w-full text-center py-3.5 rounded-xl font-bold text-sm transition-colors shadow-md',
+                    isOpen
+                      ? 'bg-[#FF7789] text-white hover:bg-[#ff5f72] shadow-[#FF7789]/20'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200 shadow-gray-200/50',
+                  ].join(' ')}
                 >
-                  신청하기
+                  {isOpen ? '신청하기' : '다음 모집 알림 신청하기'}
                 </a>
               </div>
             </div>
@@ -492,18 +506,21 @@ function Footer() {
 }
 
 // ─── Page ──────────────────────────────────────────────────────────
-export default function Home() {
+export default async function Home() {
+  const settings = await getRecruitmentSettings();
+  const isOpen = isRecruitmentOpen(settings);
+
   return (
     <>
       <Navbar />
       <main>
-        <HeroSection />
+        <HeroSection isOpen={isOpen} />
         <TargetSection />
         <ResultsSection />
         <BenefitsSection />
         <HowToSection />
         <ReviewsSection />
-        <ApplicationForm />
+        {isOpen ? <ApplicationForm /> : <NextRecruitmentNotificationForm />}
         <FAQSection />
       </main>
       <Footer />

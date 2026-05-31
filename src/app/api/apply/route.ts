@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { NextRequest } from 'next/server';
 import { sendPaymentRequestAlimtalk } from '@/lib/alimtalk-notifications';
+import { getRecruitmentSettings, isRecruitmentOpen } from '@/lib/recruitment';
 
 function createSupabaseClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -14,6 +15,11 @@ function createSupabaseClient() {
 }
 
 export async function POST(request: NextRequest) {
+  const recruitmentSettings = await getRecruitmentSettings();
+  if (!isRecruitmentOpen(recruitmentSettings)) {
+    return Response.json({ error: '현재 모집 기간이 아닙니다.' }, { status: 403 });
+  }
+
   let body: Record<string, unknown>;
   try {
     body = await request.json();
