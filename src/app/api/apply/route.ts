@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { NextRequest } from 'next/server';
 import { sendPaymentRequestAlimtalk } from '@/lib/alimtalk-notifications';
+import { sendPaymentRequestEmailIfOverseas } from '@/lib/email-notifications';
 import { getRecruitmentSettings, isRecruitmentOpen } from '@/lib/recruitment';
 
 function createSupabaseClient() {
@@ -59,6 +60,13 @@ export async function POST(request: NextRequest) {
   const writing_goal = class_type === '베이직반' ? 3 : 5;
   const personal_goal = 1;
 
+  const challenge_month = (() => {
+    if (recruitmentSettings?.challenge_month) return recruitmentSettings.challenge_month;
+    const ref = recruitmentSettings?.open_at ? new Date(recruitmentSettings.open_at) : new Date();
+    const kst = new Date(ref.getTime() + 9 * 60 * 60 * 1000);
+    return `${kst.getUTCFullYear()}-${String(kst.getUTCMonth() + 1).padStart(2, '0')}`;
+  })();
+
   let supabase: ReturnType<typeof createSupabaseClient>;
   try {
     supabase = createSupabaseClient();
@@ -82,6 +90,7 @@ export async function POST(request: NextRequest) {
       is_overseas_resident: is_overseas_resident ?? false,
       is_first_time: is_first_time ?? false,
       status: 'applied',
+      challenge_month,
     })
     .select('id')
     .single();
@@ -94,22 +103,33 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const applicantPayload = {
+    id: newApplicant.id,
+    nickname,
+    aid,
+    email,
+    phone,
+    blog_url,
+    class_type,
+    writing_goal,
+    personal_goal,
+    is_overseas_resident: is_overseas_resident ?? false,
+  };
+
   // 입금 요청 알림톡 발송 (실패해도 신청 저장 결과는 유지)
   try {
-    await sendPaymentRequestAlimtalk(supabase, {
-      id: newApplicant.id,
-      nickname,
-      aid,
-      email,
-      phone,
-      blog_url,
-      class_type,
-      writing_goal,
-      personal_goal,
-      is_overseas_resident: is_overseas_resident ?? false,
-    });
+    await sendPaymentRequestAlimtalk(supabase, applicantPayload);
   } catch (err) {
     console.error('[alimtalk] 발송 실패:', err instanceof Error ? err.message : err);
+  }
+
+  // 해외 체류/거주자에게 이메일 추가 발송 (실패해도 신청 저장 결과는 유지)
+  if (is_overseas_resident) {
+    try {
+      await sendPaymentRequestEmailIfOverseas(supabase, applicantPayload);
+    } catch (err) {
+      console.error('[email] 입금 요청 이메일 발송 실패:', err instanceof Error ? err.message : err);
+    }
   }
 
   return Response.json({ success: true }, { status: 201 });

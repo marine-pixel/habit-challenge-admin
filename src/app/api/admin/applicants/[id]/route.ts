@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { NextRequest } from 'next/server';
 import { sendPaymentCompleteAlimtalk } from '@/lib/alimtalk-notifications';
+import { sendStartGuideEmailIfOverseas } from '@/lib/email-notifications';
 
 function adminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -26,6 +27,7 @@ export async function PATCH(
       memo?: string;
       is_overseas_resident?: boolean;
       is_first_time?: boolean;
+      challenge_month?: string;
     };
 
     if ('email' in body && !body.email) {
@@ -43,6 +45,7 @@ export async function PATCH(
     if ('memo' in body) updateData.memo = body.memo || null;
     if ('is_overseas_resident' in body) updateData.is_overseas_resident = body.is_overseas_resident ?? false;
     if ('is_first_time' in body) updateData.is_first_time = body.is_first_time ?? false;
+    if ('challenge_month' in body) updateData.challenge_month = body.challenge_month || null;
     if ('class_type' in body) {
       updateData.class_type = body.class_type || null;
       if (body.class_type === '베이직반') {
@@ -80,12 +83,19 @@ export async function PATCH(
 
     if (error) return Response.json({ error: error.message }, { status: 500 });
 
-    // applied에서 paid로 변경된 경우에만 입금 완료 알림톡 발송
+    // applied에서 paid로 변경된 경우에만 시작 메시지 알림톡 + 해외 거주자 이메일 발송
     if (previousApplicant?.status === 'applied' && body.status === 'paid') {
       try {
         await sendPaymentCompleteAlimtalk(supabase, previousApplicant);
       } catch (err) {
-        console.error('[alimtalk] 입금 완료 알림톡 발송 실패:', err instanceof Error ? err.message : err);
+        console.error('[alimtalk] 시작 메시지 알림톡 발송 실패:', err instanceof Error ? err.message : err);
+      }
+      if (previousApplicant.is_overseas_resident) {
+        try {
+          await sendStartGuideEmailIfOverseas(supabase, previousApplicant);
+        } catch (err) {
+          console.error('[email] 시작 안내 이메일 발송 실패:', err instanceof Error ? err.message : err);
+        }
       }
     }
 

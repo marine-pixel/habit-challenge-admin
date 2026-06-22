@@ -8,6 +8,7 @@ type RecruitmentSettings = {
   is_open: boolean;
   open_at: string | null;
   close_at: string | null;
+  challenge_month: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -65,6 +66,7 @@ export default function RecruitmentPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [openAt, setOpenAt] = useState('');
   const [closeAt, setCloseAt] = useState('');
+  const [challengeMonth, setChallengeMonth] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -89,6 +91,7 @@ export default function RecruitmentPage() {
         setIsOpen(data.settings.is_open);
         setOpenAt(toKSTInput(data.settings.open_at));
         setCloseAt(toKSTInput(data.settings.close_at));
+        setChallengeMonth(data.settings.challenge_month ?? '');
       }
     } catch {
       setSaveError('데이터를 불러오지 못했습니다.');
@@ -112,6 +115,7 @@ export default function RecruitmentPage() {
       is_open: isOpen,
       open_at: fromKSTInput(openAt),
       close_at: fromKSTInput(closeAt),
+      challenge_month: challengeMonth || null,
     };
 
     try {
@@ -188,6 +192,24 @@ export default function RecruitmentPage() {
                 placeholder="습관챌린지"
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#28B8D1]/30 focus:border-[#28B8D1] transition-all text-sm text-[#1a1a2e]"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wide">
+                챌린지 월
+              </label>
+              <input
+                type="text"
+                value={challengeMonth}
+                onChange={(e) => setChallengeMonth(e.target.value)}
+                placeholder="예: 2026-07"
+                className="w-full sm:w-40 px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#28B8D1]/30 focus:border-[#28B8D1] transition-all text-sm text-[#1a1a2e] font-mono"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                {challengeMonth
+                  ? `신청자 자동 저장 시 challenge_month = "${challengeMonth}"`
+                  : 'YYYY-MM 형식으로 입력. 비워두면 open_at 기준으로 자동 설정'}
+              </p>
             </div>
 
             <div className="flex items-center gap-3">

@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 
-type Channel = 'alimtalk' | 'lms';
-type MessageCategory = 'payment' | 'boosting' | 'start' | 'reminder' | 'operation';
+type Channel = 'alimtalk' | 'lms' | 'email';
+type MessageCategory = 'payment' | 'complete' | 'start' | 'reminder' | 'misc';
 
 interface VariableEntry {
   key: string;
@@ -15,7 +15,7 @@ interface MessageTemplate {
   name: string;
   trigger_type: string;
   channel: Channel;
-  message_category: MessageCategory;
+  message_category: string; // string to allow legacy category values from DB
   solapi_template_code: string | null;
   solapi_pf_id: string | null;
   title: string | null;
@@ -40,38 +40,46 @@ interface FormValues {
   memo: string;
 }
 
-const CATEGORY_LABELS: Record<MessageCategory, string> = {
-  payment: '입금 메세지',
-  boosting: '부스팅 메세지',
-  start: '시작 메세지',
-  reminder: '리마인드 메세지',
-  operation: '운영 안내',
+const CATEGORY_LABELS: Record<string, string> = {
+  payment: '입금',
+  complete: '완료',
+  start: '시작',
+  reminder: '리마인드',
+  misc: '기타',
+  // 레거시 값 — graceful display
+  boosting: '기타(구)',
+  operation: '기타(구)',
 };
 
-const CATEGORY_BADGE_CLASS: Record<MessageCategory, string> = {
+const CATEGORY_BADGE_CLASS: Record<string, string> = {
   payment: 'bg-green-100 text-green-700',
-  boosting: 'bg-purple-100 text-purple-700',
+  complete: 'bg-blue-100 text-blue-700',
   start: 'bg-[#28B8D1]/10 text-[#28B8D1]',
   reminder: 'bg-amber-100 text-amber-700',
-  operation: 'bg-gray-100 text-gray-600',
+  misc: 'bg-gray-100 text-gray-600',
+  // 레거시
+  boosting: 'bg-gray-100 text-gray-500',
+  operation: 'bg-gray-100 text-gray-500',
 };
 
 const CHANNEL_BADGE_CLASS: Record<Channel, string> = {
   alimtalk: 'bg-[#28B8D1]/10 text-[#28B8D1] border border-[#28B8D1]/20',
   lms: 'bg-[#FF7789]/10 text-[#FF7789] border border-[#FF7789]/20',
+  email: 'bg-orange-100 text-orange-700 border border-orange-200',
 };
 
 const CHANNEL_LABELS: Record<Channel, string> = {
   alimtalk: '알림톡',
   lms: 'LMS',
+  email: '이메일',
 };
 
 const CATEGORY_OPTIONS: { value: MessageCategory; label: string }[] = [
-  { value: 'payment', label: '입금 메세지' },
-  { value: 'boosting', label: '부스팅 메세지' },
-  { value: 'start', label: '시작 메세지' },
-  { value: 'reminder', label: '리마인드 메세지' },
-  { value: 'operation', label: '운영 안내' },
+  { value: 'payment', label: '입금' },
+  { value: 'complete', label: '완료' },
+  { value: 'start', label: '시작' },
+  { value: 'reminder', label: '리마인드' },
+  { value: 'misc', label: '기타' },
 ];
 
 const EMPTY_FORM: FormValues = {
@@ -112,7 +120,7 @@ export default function MessagesPage() {
 
   const [search, setSearch] = useState('');
   const [channelFilter, setChannelFilter] = useState<'all' | Channel>('all');
-  const [categoryFilter, setCategoryFilter] = useState<'all' | MessageCategory>('all');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | string>('all');
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
   const [modalMode, setModalMode] = useState<'add' | 'edit' | null>(null);
@@ -145,6 +153,7 @@ export default function MessagesPage() {
     total: templates.length,
     alimtalk: templates.filter(t => t.channel === 'alimtalk').length,
     lms: templates.filter(t => t.channel === 'lms').length,
+    email: templates.filter(t => t.channel === 'email').length,
     active: templates.filter(t => t.is_active).length,
   }), [templates]);
 
@@ -238,6 +247,12 @@ export default function MessagesPage() {
     if (formValues.channel === 'lms' && !formValues.body.trim()) {
       setFormError('LMS 채널은 본문이 필수입니다.'); return;
     }
+    if (formValues.channel === 'email' && !formValues.title.trim()) {
+      setFormError('이메일 채널은 제목(이메일 제목)이 필수입니다.'); return;
+    }
+    if (formValues.channel === 'email' && !formValues.body.trim()) {
+      setFormError('이메일 채널은 본문이 필수입니다.'); return;
+    }
     if (formValues.channel === 'alimtalk' && !formValues.solapi_template_code.trim()) {
       setFormError('알림톡 채널은 SOLAPI 템플릿 코드가 필수입니다.'); return;
     }
@@ -306,6 +321,7 @@ export default function MessagesPage() {
   }
 
   const isAlimtalk = formValues.channel === 'alimtalk';
+  const isEmail = formValues.channel === 'email';
 
   return (
     <div className="min-h-screen bg-[#F2F2F7]">
@@ -332,11 +348,12 @@ export default function MessagesPage() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
           {[
             { label: '전체 템플릿', value: summary.total, color: 'text-[#1a1a2e]', dot: 'bg-gray-300' },
             { label: '알림톡', value: summary.alimtalk, color: 'text-[#28B8D1]', dot: 'bg-[#28B8D1]' },
             { label: 'LMS', value: summary.lms, color: 'text-[#FF7789]', dot: 'bg-[#FF7789]' },
+            { label: '이메일', value: summary.email, color: 'text-orange-600', dot: 'bg-orange-500' },
             { label: '사용 중', value: summary.active, color: 'text-green-600', dot: 'bg-green-500' },
           ].map(({ label, value, color, dot }) => (
             <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex flex-col gap-1">
@@ -367,10 +384,11 @@ export default function MessagesPage() {
               <option value="all">전체 채널</option>
               <option value="alimtalk">알림톡</option>
               <option value="lms">LMS</option>
+              <option value="email">이메일</option>
             </select>
             <select
               value={categoryFilter}
-              onChange={e => setCategoryFilter(e.target.value as 'all' | MessageCategory)}
+              onChange={e => setCategoryFilter(e.target.value)}
               className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#28B8D1] bg-white text-gray-600"
             >
               <option value="all">전체 카테고리</option>
@@ -552,68 +570,86 @@ export default function MessagesPage() {
                     <option value="">선택</option>
                     <option value="alimtalk">알림톡</option>
                     <option value="lms">LMS</option>
+                    <option value="email">이메일</option>
                   </select>
                 </div>
               </div>
 
-              {/* SOLAPI 템플릿 코드 */}
-              <div>
-                <label className={`block text-xs font-semibold mb-1 ${isAlimtalk ? 'text-[#28B8D1]' : 'text-gray-500'}`}>
-                  SOLAPI 템플릿 코드
-                  {isAlimtalk
-                    ? <span className="text-[#FF7789] ml-1">*</span>
-                    : <span className="ml-1 font-normal text-gray-400">(선택)</span>
-                  }
-                </label>
-                <input
-                  name="solapi_template_code"
-                  type="text"
-                  value={formValues.solapi_template_code}
-                  onChange={handleFormChange}
-                  placeholder="예: KA01TP..."
-                  className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none transition-colors ${
-                    isAlimtalk
-                      ? 'border-[#28B8D1]/50 bg-[#28B8D1]/5 focus:border-[#28B8D1]'
-                      : 'border-gray-200 focus:border-[#28B8D1]'
-                  }`}
-                />
-              </div>
+              {/* SOLAPI 템플릿 코드 — 이메일 채널에서는 숨김 */}
+              {!isEmail && (
+                <div>
+                  <label className={`block text-xs font-semibold mb-1 ${isAlimtalk ? 'text-[#28B8D1]' : 'text-gray-500'}`}>
+                    SOLAPI 템플릿 코드
+                    {isAlimtalk
+                      ? <span className="text-[#FF7789] ml-1">*</span>
+                      : <span className="ml-1 font-normal text-gray-400">(선택)</span>
+                    }
+                  </label>
+                  <input
+                    name="solapi_template_code"
+                    type="text"
+                    value={formValues.solapi_template_code}
+                    onChange={handleFormChange}
+                    placeholder="예: KA01TP..."
+                    className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none transition-colors ${
+                      isAlimtalk
+                        ? 'border-[#28B8D1]/50 bg-[#28B8D1]/5 focus:border-[#28B8D1]'
+                        : 'border-gray-200 focus:border-[#28B8D1]'
+                    }`}
+                  />
+                </div>
+              )}
 
-              {/* SOLAPI PF ID */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1">
-                  SOLAPI PF ID <span className="ml-1 font-normal text-gray-400">(선택)</span>
-                </label>
-                <input
-                  name="solapi_pf_id"
-                  type="text"
-                  value={formValues.solapi_pf_id}
-                  onChange={handleFormChange}
-                  placeholder="예: PF_..."
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#28B8D1] transition-colors"
-                />
-              </div>
+              {/* SOLAPI PF ID — 이메일 채널에서는 숨김 */}
+              {!isEmail && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">
+                    SOLAPI PF ID <span className="ml-1 font-normal text-gray-400">(선택)</span>
+                  </label>
+                  <input
+                    name="solapi_pf_id"
+                    type="text"
+                    value={formValues.solapi_pf_id}
+                    onChange={handleFormChange}
+                    placeholder="예: PF_..."
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#28B8D1] transition-colors"
+                  />
+                </div>
+              )}
 
               {/* 제목 */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1">
-                  제목{formValues.channel === 'lms' ? ' (LMS 제목)' : ''}
-                  <span className="ml-1 font-normal text-gray-400">(선택)</span>
+                <label className={`block text-xs font-semibold mb-1 ${isEmail ? 'text-orange-600' : 'text-gray-500'}`}>
+                  {isEmail ? '이메일 제목' : `제목${formValues.channel === 'lms' ? ' (LMS 제목)' : ''}`}
+                  {isEmail
+                    ? <span className="text-[#FF7789] ml-1">*</span>
+                    : <span className="ml-1 font-normal text-gray-400">(선택)</span>
+                  }
                 </label>
                 <input
                   name="title"
                   type="text"
                   value={formValues.title}
                   onChange={handleFormChange}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#28B8D1] transition-colors"
+                  placeholder={isEmail ? '예: [세시간전] 습관챌린지 참가비 입금 안내' : ''}
+                  className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none transition-colors ${
+                    isEmail
+                      ? 'border-orange-300 bg-orange-50 focus:border-orange-500'
+                      : 'border-gray-200 focus:border-[#28B8D1]'
+                  }`}
                 />
+                {isEmail && (
+                  <p className="text-xs text-gray-400 mt-1.5">
+                    제목에도 {'{{nickname}}'} 등 변수를 사용할 수 있습니다.
+                  </p>
+                )}
               </div>
 
               {/* 본문 */}
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1">
                   본문
-                  {formValues.channel === 'lms'
+                  {(formValues.channel === 'lms' || isEmail)
                     ? <span className="text-[#FF7789] ml-1">*</span>
                     : <span className="ml-1 font-normal text-gray-400">(선택)</span>
                   }
@@ -622,8 +658,14 @@ export default function MessagesPage() {
                   name="body"
                   value={formValues.body}
                   onChange={handleFormChange}
-                  rows={6}
-                  placeholder={isAlimtalk ? '관리용 참고 문구를 입력하세요 (선택)' : '메시지 본문을 입력하세요'}
+                  rows={isEmail ? 8 : 6}
+                  placeholder={
+                    isAlimtalk
+                      ? '관리용 참고 문구를 입력하세요 (선택)'
+                      : isEmail
+                        ? '이메일 본문을 입력하세요.\n예: 안녕하세요, {{nickname}}님!\nAID: {{aid}}'
+                        : '메시지 본문을 입력하세요'
+                  }
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#28B8D1] resize-none transition-colors"
                 />
                 {isAlimtalk && (
@@ -636,18 +678,27 @@ export default function MessagesPage() {
                     LMS는 이 본문이 실제 발송 문구로 사용됩니다.
                   </p>
                 )}
+                {isEmail && (
+                  <p className="text-xs text-orange-600 mt-1.5">
+                    이메일 본문이 실제 발송 문구로 사용됩니다. 줄바꿈이 그대로 반영됩니다.
+                    <br />
+                    사용 가능 변수: {'{{'+'nickname'+'}}'}, {'{{'+'aid'+'}}'}, {'{{'+'email'+'}}'}, {'{{'+'phone'+'}}'}, {'{{'+'blog_url'+'}}'}, {'{{'+'class_type'+'}}'}, {'{{'+'writing_goal'+'}}'}, {'{{'+'personal_goal'+'}}'}
+                  </p>
+                )}
               </div>
 
               {/* 변수 매핑 */}
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1">
-                  {isAlimtalk ? '알림톡 변수 매핑' : '문자 치환 변수'}
+                  {isAlimtalk ? '알림톡 변수 매핑' : isEmail ? '추가 변수 메모' : '문자 치환 변수'}
                   <span className="ml-1 font-normal text-gray-400">(선택)</span>
                 </label>
                 <p className="text-xs text-gray-400 mb-2">
                   {isAlimtalk
                     ? 'SOLAPI 템플릿에 등록된 변수명과 실제 넣을 값을 매핑해주세요. 예: #{마감기간} = 5/31'
-                    : 'LMS 본문에서 사용할 치환값을 관리합니다. 실제 자동 치환은 발송 단계에서 연결합니다.'}
+                    : isEmail
+                      ? '이메일 본문에는 {{nickname}}, {{aid}} 등 변수를 직접 입력하면 자동 치환됩니다. 이 항목은 관리 메모용입니다.'
+                      : 'LMS 본문에서 사용할 치환값을 관리합니다. 실제 자동 치환은 발송 단계에서 연결합니다.'}
                 </p>
                 <div className="space-y-2">
                   {formValues.variables.length > 0 && (

@@ -49,6 +49,7 @@ export async function PATCH(request: NextRequest) {
       is_open?: boolean;
       open_at?: string | null;
       close_at?: string | null;
+      challenge_month?: string | null;
     };
 
     const supabase = adminClient();
@@ -61,6 +62,7 @@ export async function PATCH(request: NextRequest) {
           is_open: body.is_open,
           open_at: body.open_at ?? null,
           close_at: body.close_at ?? null,
+          challenge_month: body.challenge_month ?? null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', body.id)
@@ -78,6 +80,7 @@ export async function PATCH(request: NextRequest) {
         is_open: body.is_open ?? false,
         open_at: body.open_at ?? null,
         close_at: body.close_at ?? null,
+        challenge_month: body.challenge_month ?? null,
       })
       .select()
       .single();

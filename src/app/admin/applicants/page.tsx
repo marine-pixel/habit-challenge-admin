@@ -21,6 +21,7 @@ interface Applicant {
   is_first_time: boolean | null;
   status: Status | null;
   memo: string | null;
+  challenge_month: string | null;
   created_at: string;
 }
 
@@ -35,6 +36,7 @@ interface FormValues {
   memo: string;
   is_overseas_resident: boolean;
   is_first_time: boolean;
+  challenge_month: string;
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -66,7 +68,14 @@ const EMPTY_FORM: FormValues = {
   memo: '',
   is_overseas_resident: false,
   is_first_time: false,
+  challenge_month: '',
 };
+
+function formatChallengeMonth(month: string): string {
+  const [year, m] = month.split('-');
+  if (!year || !m) return month;
+  return `${year}년 ${parseInt(m, 10)}월`;
+}
 
 function formatDateTime(dateStr: string) {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -87,7 +96,11 @@ export default function ApplicantsPage() {
   const [classFilter, setClassFilter] = useState('all');
   const [overseasFilter, setOverseasFilter] = useState<'all' | 'yes' | 'no'>('all');
   const [firstTimeFilter, setFirstTimeFilter] = useState<'all' | 'yes' | 'no'>('all');
+  const [challengeMonthFilter, setChallengeMonthFilter] = useState('all');
   const [showDuplicates, setShowDuplicates] = useState(false);
+
+  // Current recruitment month (for form default)
+  const [currentRecruitmentMonth, setCurrentRecruitmentMonth] = useState('');
 
   // Selection + bulk actions
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -124,6 +137,15 @@ export default function ApplicantsPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  useEffect(() => {
+    fetch('/api/admin/recruitment')
+      .then(r => r.json())
+      .then((d: { settings?: { challenge_month?: string | null } }) => {
+        if (d.settings?.challenge_month) setCurrentRecruitmentMonth(d.settings.challenge_month);
+      })
+      .catch(() => {});
+  }, []);
+
   // ── Derived state ────────────────────────────────────────────────────────
   const duplicateAids = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -142,6 +164,16 @@ export default function ApplicantsPage() {
     cancelled: applicants.filter(a => a.status === 'cancelled').length,
     duplicates: duplicateAids.size,
   }), [applicants, duplicateAids]);
+
+  // Distinct months present in applicants data (sorted newest first)
+  const availableMonths = useMemo(() => {
+    const months = new Set<string>();
+    if (currentRecruitmentMonth) months.add(currentRecruitmentMonth);
+    for (const a of applicants) {
+      if (a.challenge_month) months.add(a.challenge_month);
+    }
+    return [...months].sort().reverse();
+  }, [applicants, currentRecruitmentMonth]);
 
   const filtered = useMemo(() => {
     let list = showDuplicates
@@ -168,8 +200,10 @@ export default function ApplicantsPage() {
       firstTimeFilter === 'yes' ? a.is_first_time === true : !a.is_first_time
     );
 
+    if (challengeMonthFilter !== 'all') list = list.filter(a => a.challenge_month === challengeMonthFilter);
+
     return list;
-  }, [applicants, search, statusFilter, classFilter, overseasFilter, firstTimeFilter, showDuplicates, duplicateAids]);
+  }, [applicants, search, statusFilter, classFilter, overseasFilter, firstTimeFilter, challengeMonthFilter, showDuplicates, duplicateAids]);
 
   // ── Selection ────────────────────────────────────────────────────────────
   const allSelected = filtered.length > 0 && selectedIds.size === filtered.length;
@@ -299,7 +333,7 @@ export default function ApplicantsPage() {
 
   // ── Modal ────────────────────────────────────────────────────────────────
   const openAdd = () => {
-    setFormValues(EMPTY_FORM);
+    setFormValues({ ...EMPTY_FORM, challenge_month: currentRecruitmentMonth });
     setFormError(null);
     setEditingId(null);
     setModalMode('add');
@@ -317,6 +351,7 @@ export default function ApplicantsPage() {
       memo: applicant.memo ?? '',
       is_overseas_resident: applicant.is_overseas_resident ?? false,
       is_first_time: applicant.is_first_time ?? false,
+      challenge_month: applicant.challenge_month ?? '',
     });
     setFormError(null);
     setEditingId(applicant.id);
@@ -371,7 +406,7 @@ export default function ApplicantsPage() {
   const downloadCSV = () => {
     const headers = [
       'AID', '이름', '이메일', '휴대폰', '블로그 URL',
-      '참여 반', '전체 글 목표', '제휴링크 콘텐츠 목표', '상태', '해외거주', '첫 참여 여부', '메모', '신청일시',
+      '참여 반', '전체 글 목표', '제휴링크 콘텐츠 목표', '상태', '해외거주', '첫 참여 여부', '챌린지 월', '메모', '신청일시',
     ];
     const rows = filtered.map(a => [
       a.aid ?? '',
@@ -385,6 +420,7 @@ export default function ApplicantsPage() {
       STATUS_LABELS[a.status ?? ''] ?? '',
       a.is_overseas_resident ? 'Y' : 'N',
       a.is_first_time ? '첫 참여' : '기존/미체크',
+      a.challenge_month ?? '',
       a.memo ?? '',
       formatDateTime(a.created_at),
     ]);
@@ -482,6 +518,16 @@ export default function ApplicantsPage() {
         {/* ── Filters ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4">
           <div className="flex flex-wrap gap-3">
+            <select
+              value={challengeMonthFilter}
+              onChange={e => setChallengeMonthFilter(e.target.value)}
+              className="border border-[#28B8D1]/40 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#28B8D1] bg-[#28B8D1]/5 text-[#28B8D1] font-medium"
+            >
+              <option value="all">전체 월</option>
+              {availableMonths.map(m => (
+                <option key={m} value={m}>{formatChallengeMonth(m)}</option>
+              ))}
+            </select>
             <input
               type="text"
               placeholder="AID, 이름, 이메일, 휴대폰, 블로그 URL 검색"
@@ -949,6 +995,25 @@ export default function ApplicantsPage() {
                     <span className="ml-1 text-xs text-gray-400">— 이메일 추가 발송 대상</span>
                   </span>
                 </label>
+              </div>
+
+              {/* Challenge Month */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">
+                  챌린지 월
+                  <span className="ml-1 font-normal text-gray-400">(예: 2026-07)</span>
+                </label>
+                <select
+                  name="challenge_month"
+                  value={formValues.challenge_month}
+                  onChange={handleFormChange}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#28B8D1] bg-white text-gray-700"
+                >
+                  <option value="">선택 안 함</option>
+                  {availableMonths.map(m => (
+                    <option key={m} value={m}>{formatChallengeMonth(m)}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Memo */}

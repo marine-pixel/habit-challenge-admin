@@ -6,6 +6,7 @@ export type RecruitmentSettings = {
   is_open: boolean;
   open_at: string | null;
   close_at: string | null;
+  challenge_month: string | null;
   created_at: string;
   updated_at: string;
 };

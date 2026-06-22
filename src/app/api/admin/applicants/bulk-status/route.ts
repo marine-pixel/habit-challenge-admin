@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { NextRequest } from 'next/server';
 import { sendPaymentCompleteAlimtalk, type ApplicantForNotification } from '@/lib/alimtalk-notifications';
+import { sendStartGuideEmailIfOverseas } from '@/lib/email-notifications';
 
 function adminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -43,20 +44,36 @@ export async function PATCH(request: NextRequest) {
 
     if (error) return Response.json({ error: error.message }, { status: 500 });
 
-    // 상태 변경 성공 후, applied → paid 대상자에게 입금 완료 알림톡 발송
+    // 상태 변경 성공 후, applied → paid 대상자에게 시작 메시지 알림톡 + 해외 거주자 이메일 발송
     if (applicantsToNotify.length > 0) {
-      const results = await Promise.allSettled(
+      const alimtalkResults = await Promise.allSettled(
         applicantsToNotify.map((applicant) => sendPaymentCompleteAlimtalk(supabase, applicant))
       );
-      results.forEach((result, index) => {
+      alimtalkResults.forEach((result, index) => {
         if (result.status === 'rejected') {
           const applicant = applicantsToNotify[index];
           console.error(
-            `[alimtalk] 입금 완료 알림톡 발송 실패 (id=${applicant?.id ?? 'unknown'}):`,
+            `[alimtalk] 시작 메시지 알림톡 발송 실패 (id=${applicant?.id ?? 'unknown'}):`,
             result.reason instanceof Error ? result.reason.message : result.reason
           );
         }
       });
+
+      const overseasApplicants = applicantsToNotify.filter((a) => a.is_overseas_resident);
+      if (overseasApplicants.length > 0) {
+        const emailResults = await Promise.allSettled(
+          overseasApplicants.map((applicant) => sendStartGuideEmailIfOverseas(supabase, applicant))
+        );
+        emailResults.forEach((result, index) => {
+          if (result.status === 'rejected') {
+            const applicant = overseasApplicants[index];
+            console.error(
+              `[email] 시작 안내 이메일 발송 실패 (id=${applicant?.id ?? 'unknown'}):`,
+              result.reason instanceof Error ? result.reason.message : result.reason
+            );
+          }
+        });
+      }
     }
 
     return Response.json({ success: true });

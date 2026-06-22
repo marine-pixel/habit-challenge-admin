@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type Channel = 'alimtalk' | 'lms';
+type Channel = 'alimtalk' | 'lms' | 'email';
 
 interface VariableEntry {
   key: string;
@@ -41,6 +41,13 @@ interface TargetPerson {
   lastSubmittedAt: string | null;
   submittedCount: number;
   isCompleted: boolean | null;
+}
+
+interface SendResult {
+  success: number;
+  failed: number;
+  skipped: number;
+  total: number;
 }
 
 type TargetType =
@@ -81,19 +88,23 @@ const STATUS_CLASS: Record<string, string> = {
 const CHANNEL_LABELS: Record<Channel, string> = {
   alimtalk: '알림톡',
   lms: 'LMS',
+  email: '이메일',
 };
 
 const CHANNEL_BADGE_CLASS: Record<Channel, string> = {
   alimtalk: 'bg-[#28B8D1]/10 text-[#28B8D1] border border-[#28B8D1]/20',
   lms: 'bg-[#FF7789]/10 text-[#FF7789] border border-[#FF7789]/20',
+  email: 'bg-orange-100 text-orange-700 border border-orange-200',
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
-  payment: '입금 메세지',
-  boosting: '부스팅 메세지',
-  start: '시작 메세지',
-  reminder: '리마인드 메세지',
-  operation: '운영 안내',
+  payment: '입금',
+  complete: '완료',
+  start: '시작',
+  reminder: '리마인드',
+  misc: '기타',
+  boosting: '기타(구)',
+  operation: '기타(구)',
 };
 
 const MONTH_OPTIONS = ['2026-05', '2026-06', '2026-07'];
@@ -121,17 +132,27 @@ function resolveVariable(value: string, person: TargetPerson): string {
   return value !== '' ? value : '-';
 }
 
-function applyVariables(
-  text: string,
-  variables: VariableEntry[],
-  person: TargetPerson,
-): string {
+function applyVariables(text: string, variables: VariableEntry[], person: TargetPerson): string {
   let result = text;
   for (const { key, value } of variables) {
     if (!key) continue;
     result = result.split(key).join(resolveVariable(value, person));
   }
   return result;
+}
+
+function substituteEmailVars(text: string, person: TargetPerson): string {
+  const vars: Record<string, string> = {
+    nickname: person.nickname ?? '',
+    aid: person.aid ?? '',
+    email: person.email ?? '',
+    phone: person.phone ?? '',
+    blog_url: '',
+    class_type: person.class_type ?? '',
+    writing_goal: String(person.writingGoal ?? ''),
+    personal_goal: String(person.personalGoal ?? ''),
+  };
+  return text.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? '');
 }
 
 function formatDate(dateStr: string | null) {
@@ -152,6 +173,7 @@ export default function MessageTargetsPage() {
   const [templatesLoading, setTemplatesLoading] = useState(true);
 
   // ── Filter state ──
+  const [selectedChannel, setSelectedChannel] = useState<string>('');
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [targetType, setTargetType] = useState<TargetType>('');
   const [month, setMonth] = useState('2026-05');
@@ -168,6 +190,12 @@ export default function MessageTargetsPage() {
 
   // ── Selection ──
   const [selectedAids, setSelectedAids] = useState<Set<string>>(new Set());
+
+  // ── Send state ──
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState<SendResult | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   // ── Load active templates ──
   useEffect(() => {
@@ -234,6 +262,11 @@ export default function MessageTargetsPage() {
   }, [fetchTargets]);
 
   // ── Derived ──
+  const channelTemplates = useMemo(
+    () => selectedChannel ? templates.filter(t => t.channel === selectedChannel) : templates,
+    [templates, selectedChannel],
+  );
+
   const selectedTemplate = useMemo(
     () => templates.find(t => t.id === selectedTemplateId) ?? null,
     [templates, selectedTemplateId],
@@ -246,16 +279,28 @@ export default function MessageTargetsPage() {
 
   const summary = useMemo(() => {
     const sel = selectedTargets;
+    const ch = selectedTemplate?.channel ?? '';
     const withPhone = sel.filter(t => !!t.phone).length;
-    const noPhone = sel.filter(t => !t.phone).length;
-    const alimtalk = selectedTemplate?.channel === 'alimtalk' ? withPhone : 0;
-    const lms = selectedTemplate?.channel === 'lms' ? withPhone : 0;
+    const withEmail = sel.filter(t => !!t.email).length;
+
+    let canSend = 0;
+    let cannotSend = 0;
+    if (ch === 'email') {
+      canSend = withEmail;
+      cannotSend = sel.length - withEmail;
+    } else if (ch === 'alimtalk' || ch === 'lms') {
+      canSend = withPhone;
+      cannotSend = sel.length - withPhone;
+    } else {
+      canSend = sel.length;
+      cannotSend = 0;
+    }
+
     return {
       autoExtracted: autoExtractedCount,
       selected: sel.length,
-      alimtalk,
-      lms,
-      noPhone,
+      canSend,
+      cannotSend,
     };
   }, [selectedTargets, selectedTemplate, autoExtractedCount]);
 
@@ -265,12 +310,21 @@ export default function MessageTargetsPage() {
   );
 
   const previewPerson = selectedTargets[0] ?? null;
+  const confirmPreviewTargets = useMemo(() => selectedTargets.slice(0, 5), [selectedTargets]);
 
   function previewText(text: string | null): string {
     if (!text) return '';
     if (!previewPerson || parsedVariables.length === 0) return text;
     return applyVariables(text, parsedVariables, previewPerson);
   }
+
+  function previewEmailText(text: string | null): string {
+    if (!text) return '';
+    if (!previewPerson) return text;
+    return substituteEmailVars(text, previewPerson);
+  }
+
+  const canSendNow = !!selectedTemplate && selectedAids.size > 0 && !sending;
 
   // ── Checkbox ──
   const isAllSelected = targets.length > 0 && selectedAids.size === targets.length;
@@ -291,8 +345,53 @@ export default function MessageTargetsPage() {
     });
   }, []);
 
-  const handleSearch = () => {
-    setSearch(searchInput);
+  const handleSearch = () => setSearch(searchInput);
+
+  const handleChannelChange = (ch: string) => {
+    setSelectedChannel(ch);
+    if (selectedTemplate && ch && selectedTemplate.channel !== ch) {
+      setSelectedTemplateId('');
+    }
+  };
+
+  const handleTemplateChange = (id: string) => {
+    setSelectedTemplateId(id);
+    if (id) {
+      const tmpl = templates.find(t => t.id === id);
+      if (tmpl) setSelectedChannel(tmpl.channel);
+    }
+  };
+
+  // ── Send ──
+  const handleSend = async () => {
+    if (!selectedTemplate || selectedAids.size === 0) return;
+    setSending(true);
+    setSendError(null);
+    try {
+      const res = await fetch('/api/admin/send-messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          template_id: selectedTemplate.id,
+          aids: Array.from(selectedAids),
+        }),
+      });
+      const json = await res.json() as {
+        success?: number; failed?: number; skipped?: number; total?: number; error?: string;
+      };
+      if (!res.ok || json.error) throw new Error(json.error ?? '발송 실패');
+      setSendResult({
+        success: json.success ?? 0,
+        failed: json.failed ?? 0,
+        skipped: json.skipped ?? 0,
+        total: json.total ?? 0,
+      });
+      setShowConfirmModal(false);
+    } catch (e) {
+      setSendError(e instanceof Error ? e.message : '알 수 없는 오류');
+    } finally {
+      setSending(false);
+    }
   };
 
   // ── Render ──────────────────────────────────────────────────────────────
@@ -304,33 +403,76 @@ export default function MessageTargetsPage() {
         {/* Header */}
         <div className="mb-6">
           <p className="text-xs text-gray-400 mb-0.5">세시간전 습관챌린지</p>
-          <h1 className="text-2xl font-bold text-[#1a1a2e]">발송 대상 확인</h1>
+          <h1 className="text-2xl font-bold text-[#1a1a2e]">발송 대상 확인 · 수동 발송</h1>
           <p className="text-sm text-gray-400 mt-1">
-            메시지 템플릿과 발송 대상 유형을 선택해 실제 발송 전 대상자와 내용을 확인합니다.
+            채널과 템플릿을 선택하고, 대상자를 확인한 후 메시지를 발송합니다.
           </p>
         </div>
+
+        {/* Send result banner */}
+        {sendResult && (
+          <div className="bg-green-50 border border-green-200 rounded-2xl px-5 py-4 mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <p className="text-sm font-bold text-green-800">발송 완료</p>
+                <p className="text-xs text-green-600 mt-0.5">
+                  성공 <strong>{sendResult.success}</strong>명 · 실패 <strong>{sendResult.failed}</strong>명 · 제외 <strong>{sendResult.skipped}</strong>명 (전체 {sendResult.total}명)
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setSendResult(null)}
+              className="text-green-400 hover:text-green-600 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
 
         {/* Settings Card */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
-            {/* Template select */}
-            <div className="sm:col-span-2 lg:col-span-1">
+            {/* Channel select */}
+            <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-                메시지 템플릿
+                채널 <span className="text-[#FF7789]">*</span>
+              </label>
+              <select
+                value={selectedChannel}
+                onChange={e => handleChannelChange(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#28B8D1] bg-white text-gray-700"
+              >
+                <option value="">전체 채널</option>
+                <option value="alimtalk">알림톡</option>
+                <option value="lms">LMS</option>
+                <option value="email">이메일</option>
+              </select>
+            </div>
+
+            {/* Template select */}
+            <div className="sm:col-span-1 lg:col-span-2">
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                메시지 템플릿 <span className="text-[#FF7789]">*</span>
               </label>
               <select
                 value={selectedTemplateId}
-                onChange={e => setSelectedTemplateId(e.target.value)}
+                onChange={e => handleTemplateChange(e.target.value)}
                 disabled={templatesLoading}
                 className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#28B8D1] bg-white text-gray-700 disabled:opacity-50"
               >
                 <option value="">
-                  {templatesLoading ? '불러오는 중...' : '템플릿 선택 (선택)'}
+                  {templatesLoading ? '불러오는 중...' : '템플릿 선택'}
                 </option>
-                {templates.map(t => (
+                {channelTemplates.map(t => (
                   <option key={t.id} value={t.id}>
-                    [{CHANNEL_LABELS[t.channel]}] {t.name} · {CATEGORY_LABELS[t.message_category] ?? t.message_category}
+                    [{CHANNEL_LABELS[t.channel] ?? t.channel}] {t.name}
+                    {t.message_category ? ` · ${CATEGORY_LABELS[t.message_category] ?? t.message_category}` : ''}
                   </option>
                 ))}
               </select>
@@ -408,7 +550,7 @@ export default function MessageTargetsPage() {
             </div>
 
             {/* Search */}
-            <div>
+            <div className="sm:col-span-2 lg:col-span-2">
               <label className="block text-xs font-semibold text-gray-500 mb-1.5">
                 검색
               </label>
@@ -418,9 +560,7 @@ export default function MessageTargetsPage() {
                   placeholder="이름, 이메일, 휴대폰, AID"
                   value={searchInput}
                   onChange={e => setSearchInput(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') handleSearch();
-                  }}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
                   className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#28B8D1] transition-colors"
                 />
                 <button
@@ -447,29 +587,22 @@ export default function MessageTargetsPage() {
                 highlight: false,
               },
               {
-                label: '현재 선택된 대상',
+                label: '현재 선택',
                 value: summary.selected,
                 color: 'text-[#28B8D1]',
                 dot: 'bg-[#28B8D1]',
                 highlight: true,
               },
               {
-                label: '알림톡 대상',
-                value: summary.alimtalk,
-                color: 'text-[#28B8D1]',
-                dot: 'bg-[#28B8D1]/40',
+                label: '발송 가능',
+                value: summary.canSend,
+                color: 'text-green-600',
+                dot: 'bg-green-500',
                 highlight: false,
               },
               {
-                label: 'LMS 대상',
-                value: summary.lms,
-                color: 'text-[#FF7789]',
-                dot: 'bg-[#FF7789]/40',
-                highlight: false,
-              },
-              {
-                label: '번호 없는 대상',
-                value: summary.noPhone,
+                label: '발송 불가(제외)',
+                value: summary.cannotSend,
                 color: 'text-amber-500',
                 dot: 'bg-amber-400',
                 highlight: false,
@@ -492,14 +625,21 @@ export default function MessageTargetsPage() {
             </div>
           ))}
 
-          {/* Disabled send button */}
+          {/* Send button */}
           <div className="flex items-end">
             <button
-              disabled
-              title="SOLAPI 연동 후 사용 가능합니다"
-              className="px-5 py-3 rounded-2xl bg-gray-100 text-gray-400 text-sm font-semibold cursor-not-allowed border border-gray-200 whitespace-nowrap select-none"
+              onClick={() => { setSendError(null); setShowConfirmModal(true); }}
+              disabled={!canSendNow}
+              className={`px-5 py-3 rounded-2xl text-sm font-semibold whitespace-nowrap transition-colors ${
+                canSendNow
+                  ? 'bg-[#28B8D1] text-white hover:bg-[#1fa8bf] shadow-sm cursor-pointer'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+              }`}
+              title={!selectedTemplate ? '채널과 템플릿을 선택해주세요' : selectedAids.size === 0 ? '대상자를 선택해주세요' : ''}
             >
-              SOLAPI 연동 후 발송 가능
+              {selectedTemplate
+                ? `${selectedAids.size}명에게 발송`
+                : '템플릿 선택 후 발송 가능'}
             </button>
           </div>
         </div>
@@ -590,7 +730,7 @@ export default function MessageTargetsPage() {
                       </th>
                       {[
                         'AID', '이름', '이메일', '휴대폰',
-                        '참여반', '이메일추가', '상태', '주차', '제출', '제휴', '마지막 제출일',
+                        '참여반', '해외', '상태', '주차', '제출', '제휴', '마지막 제출일',
                       ].map(col => (
                         <th
                           key={col}
@@ -604,6 +744,9 @@ export default function MessageTargetsPage() {
                   <tbody>
                     {targets.map(t => {
                       const isSelected = selectedAids.has(t.aid);
+                      const missingContact = selectedTemplate
+                        ? (selectedTemplate.channel === 'email' ? !t.email : !t.phone)
+                        : false;
                       return (
                         <tr
                           key={t.aid || t.applicantId}
@@ -614,11 +757,7 @@ export default function MessageTargetsPage() {
                               : 'hover:bg-gray-50/70'
                           }`}
                         >
-                          {/* Checkbox */}
-                          <td
-                            className="px-4 py-3"
-                            onClick={e => e.stopPropagation()}
-                          >
+                          <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                             <input
                               type="checkbox"
                               checked={isSelected}
@@ -626,92 +765,49 @@ export default function MessageTargetsPage() {
                               className="w-4 h-4 rounded border-gray-300 accent-[#28B8D1] cursor-pointer"
                             />
                           </td>
-
-                          {/* AID */}
-                          <td className="px-4 py-3 font-mono text-xs text-gray-500">
-                            {t.aid || '-'}
-                          </td>
-
-                          {/* 이름 */}
-                          <td className="px-4 py-3 font-medium text-[#1a1a2e]">
-                            {t.nickname || '-'}
-                          </td>
-
-                          {/* 이메일 */}
+                          <td className="px-4 py-3 font-mono text-xs text-gray-500">{t.aid || '-'}</td>
+                          <td className="px-4 py-3 font-medium text-[#1a1a2e]">{t.nickname || '-'}</td>
                           <td className="px-4 py-3 max-w-[160px]">
-                            <div
-                              className="truncate text-xs text-gray-500"
-                              title={t.email ?? ''}
-                            >
-                              {t.email || '-'}
+                            <div className={`truncate text-xs ${missingContact && selectedTemplate?.channel === 'email' ? 'text-amber-500 font-medium' : 'text-gray-500'}`} title={t.email ?? ''}>
+                              {t.email || <span className="text-amber-400 font-medium">없음</span>}
                             </div>
                           </td>
-
-                          {/* 휴대폰 */}
                           <td className="px-4 py-3 text-xs text-gray-600">
                             {t.phone || (
-                              <span className="text-amber-400 font-medium">없음</span>
+                              <span className={missingContact && selectedTemplate?.channel !== 'email' ? 'text-amber-500 font-medium' : 'text-amber-400 font-medium'}>없음</span>
                             )}
                           </td>
-
-                          {/* 참여반 */}
-                          <td className="px-4 py-3 text-xs text-gray-600">
-                            {t.class_type || '-'}
-                          </td>
-
-                          {/* 이메일 추가 발송 여부 */}
+                          <td className="px-4 py-3 text-xs text-gray-600">{t.class_type || '-'}</td>
                           <td className="px-4 py-3 text-center">
                             {t.is_overseas_resident ? (
                               <span className="inline-flex items-center text-[10px] bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full font-semibold whitespace-nowrap">
-                                이메일 추가
+                                해외
                               </span>
                             ) : (
                               <span className="text-gray-300 text-xs">-</span>
                             )}
                           </td>
-
-                          {/* 상태 */}
                           <td className="px-4 py-3">
                             {t.status ? (
-                              <span
-                                className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${
-                                  STATUS_CLASS[t.status] ?? 'bg-gray-100 text-gray-500'
-                                }`}
-                              >
+                              <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_CLASS[t.status] ?? 'bg-gray-100 text-gray-500'}`}>
                                 {STATUS_LABEL[t.status] ?? t.status}
                               </span>
-                            ) : (
-                              '-'
-                            )}
+                            ) : '-'}
                           </td>
-
-                          {/* 주차 */}
                           <td className="px-4 py-3 text-xs text-gray-500">
                             {t.week !== null ? `${t.week}주` : '-'}
                           </td>
-
-                          {/* 제출 */}
                           <td className="px-4 py-3 text-center">
-                            <span
-                              className={`text-xs font-bold ${
-                                (t.approvedCount ?? 0) > 0 ? 'text-green-600' : 'text-gray-300'
-                              }`}
-                            >
+                            <span className={`text-xs font-bold ${(t.approvedCount ?? 0) > 0 ? 'text-green-600' : 'text-gray-300'}`}>
                               {t.approvedCount ?? 0}
                             </span>
                             {t.writingGoal !== null && (
-                              <span className="text-xs text-gray-300">
-                                /{t.writingGoal}
-                              </span>
+                              <span className="text-xs text-gray-300">/{t.writingGoal}</span>
                             )}
                           </td>
-
-                          {/* 제휴 */}
                           <td className="px-4 py-3 text-center text-xs text-gray-500">
                             {t.affiliateContentCount ?? 0}
                           </td>
-
-                          {/* 마지막 제출일 */}
                           <td className="px-4 py-3 text-xs text-gray-400">
                             {formatDate(t.lastSubmittedAt)}
                           </td>
@@ -723,11 +819,13 @@ export default function MessageTargetsPage() {
               </div>
             )}
 
-            {/* Footer */}
             {targets.length > 0 && (
               <div className="px-5 py-3 border-t border-gray-50">
                 <p className="text-xs text-gray-400">
                   {targets.length}명 추출 · {selectedAids.size}명 선택
+                  {selectedTemplate && summary.cannotSend > 0 && (
+                    <span className="text-amber-500 ml-2">· 발송 불가(연락처 없음) {summary.cannotSend}명</span>
+                  )}
                 </p>
               </div>
             )}
@@ -750,73 +848,46 @@ export default function MessageTargetsPage() {
             <div className="p-5 space-y-4">
               {!selectedTemplate ? (
                 <div className="text-center py-10">
-                  <svg
-                    className="w-10 h-10 text-gray-100 mx-auto mb-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-                    />
+                  <svg className="w-10 h-10 text-gray-100 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                   </svg>
-                  <p className="text-xs text-gray-300">템플릿을 선택하면 미리보기가 표시됩니다.</p>
+                  <p className="text-xs text-gray-300">채널과 템플릿을 선택하면 미리보기가 표시됩니다.</p>
                 </div>
               ) : (
                 <>
                   {/* Channel + name */}
                   <div className="flex items-start gap-2 flex-wrap">
-                    <span
-                      className={`text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ${
-                        CHANNEL_BADGE_CLASS[selectedTemplate.channel]
-                      }`}
-                    >
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ${CHANNEL_BADGE_CLASS[selectedTemplate.channel]}`}>
                       {CHANNEL_LABELS[selectedTemplate.channel]}
                     </span>
-                    <span className="text-xs text-gray-500 leading-6 break-words">
-                      {selectedTemplate.name}
-                    </span>
+                    <span className="text-xs text-gray-500 leading-6 break-words">{selectedTemplate.name}</span>
                   </div>
 
                   {/* ── Alimtalk ── */}
                   {selectedTemplate.channel === 'alimtalk' && (
                     <>
-                      {/* SOLAPI 코드 */}
                       <div>
                         <p className="text-xs font-semibold text-gray-500 mb-1.5">SOLAPI 템플릿 코드</p>
                         <p className="font-mono text-xs text-gray-700 bg-gray-50 rounded-xl px-3 py-2 break-all">
-                          {selectedTemplate.solapi_template_code || (
-                            <span className="text-gray-300">없음</span>
-                          )}
+                          {selectedTemplate.solapi_template_code || <span className="text-gray-300">없음</span>}
                         </p>
                       </div>
-
-                      {/* 변수 매핑 */}
                       {parsedVariables.length > 0 && (
                         <div>
                           <p className="text-xs font-semibold text-gray-500 mb-2">변수 매핑</p>
                           <div className="bg-gray-50 rounded-xl p-3 space-y-2">
                             {parsedVariables.map((v, i) => (
                               <div key={i} className="flex items-center gap-2 text-xs min-w-0">
-                                <span className="font-mono text-gray-600 bg-white border border-gray-200 rounded px-2 py-1 flex-shrink-0 max-w-[40%] truncate">
-                                  {v.key}
-                                </span>
+                                <span className="font-mono text-gray-600 bg-white border border-gray-200 rounded px-2 py-1 flex-shrink-0 max-w-[40%] truncate">{v.key}</span>
                                 <span className="text-gray-300 flex-shrink-0">→</span>
                                 <span className="text-[#28B8D1] font-semibold truncate">
-                                  {previewPerson
-                                    ? resolveVariable(v.value, previewPerson)
-                                    : v.value || '-'}
+                                  {previewPerson ? resolveVariable(v.value, previewPerson) : v.value || '-'}
                                 </span>
                               </div>
                             ))}
                           </div>
                         </div>
                       )}
-
-                      {/* 관리용 본문 */}
                       {selectedTemplate.body && (
                         <div>
                           <p className="text-xs font-semibold text-gray-500 mb-1.5">관리용 본문</p>
@@ -825,7 +896,6 @@ export default function MessageTargetsPage() {
                           </div>
                         </div>
                       )}
-
                       <div className="bg-[#28B8D1]/5 border border-[#28B8D1]/10 rounded-xl px-3 py-2.5">
                         <p className="text-xs text-[#28B8D1] leading-relaxed">
                           실제 알림톡 본문은 SOLAPI 검수 템플릿 기준으로 발송됩니다.
@@ -837,7 +907,6 @@ export default function MessageTargetsPage() {
                   {/* ── LMS ── */}
                   {selectedTemplate.channel === 'lms' && (
                     <>
-                      {/* 제목 */}
                       {selectedTemplate.title && (
                         <div>
                           <p className="text-xs font-semibold text-gray-500 mb-1.5">제목</p>
@@ -846,42 +915,54 @@ export default function MessageTargetsPage() {
                           </p>
                         </div>
                       )}
-
-                      {/* 변수 매핑 */}
                       {parsedVariables.length > 0 && (
                         <div>
                           <p className="text-xs font-semibold text-gray-500 mb-2">변수 치환</p>
                           <div className="bg-gray-50 rounded-xl p-3 space-y-2">
                             {parsedVariables.map((v, i) => (
                               <div key={i} className="flex items-center gap-2 text-xs min-w-0">
-                                <span className="font-mono text-gray-600 bg-white border border-gray-200 rounded px-2 py-1 flex-shrink-0 max-w-[40%] truncate">
-                                  {v.key}
-                                </span>
+                                <span className="font-mono text-gray-600 bg-white border border-gray-200 rounded px-2 py-1 flex-shrink-0 max-w-[40%] truncate">{v.key}</span>
                                 <span className="text-gray-300 flex-shrink-0">→</span>
                                 <span className="text-[#FF7789] font-semibold truncate">
-                                  {previewPerson
-                                    ? resolveVariable(v.value, previewPerson)
-                                    : v.value || '-'}
+                                  {previewPerson ? resolveVariable(v.value, previewPerson) : v.value || '-'}
                                 </span>
                               </div>
                             ))}
                           </div>
                         </div>
                       )}
-
-                      {/* 본문 */}
                       <div>
                         <p className="text-xs font-semibold text-gray-500 mb-1.5">본문</p>
                         <div className="text-xs text-gray-600 bg-gray-50 rounded-xl px-3 py-3 whitespace-pre-wrap leading-relaxed min-h-[80px]">
-                          {previewText(selectedTemplate.body) || (
-                            <span className="text-gray-300">본문 없음</span>
-                          )}
+                          {previewText(selectedTemplate.body) || <span className="text-gray-300">본문 없음</span>}
                         </div>
                       </div>
-
                       <div className="bg-[#FF7789]/5 border border-[#FF7789]/10 rounded-xl px-3 py-2.5">
-                        <p className="text-xs text-[#FF7789] leading-relaxed">
-                          LMS는 위 본문이 실제 발송 문구로 사용됩니다.
+                        <p className="text-xs text-[#FF7789] leading-relaxed">LMS는 위 본문이 실제 발송 문구로 사용됩니다.</p>
+                      </div>
+                    </>
+                  )}
+
+                  {/* ── 이메일 ── */}
+                  {selectedTemplate.channel === 'email' && (
+                    <>
+                      {selectedTemplate.title && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 mb-1.5">이메일 제목</p>
+                          <p className="text-sm font-semibold text-[#1a1a2e] bg-orange-50 rounded-xl px-3 py-2">
+                            {previewEmailText(selectedTemplate.title)}
+                          </p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 mb-1.5">이메일 본문</p>
+                        <div className="text-xs text-gray-600 bg-gray-50 rounded-xl px-3 py-3 whitespace-pre-wrap leading-relaxed min-h-[80px]">
+                          {previewEmailText(selectedTemplate.body) || <span className="text-gray-300">본문 없음</span>}
+                        </div>
+                      </div>
+                      <div className="bg-orange-50 border border-orange-200 rounded-xl px-3 py-2.5">
+                        <p className="text-xs text-orange-700 leading-relaxed">
+                          Gmail SMTP로 발송됩니다. {'{{'+'nickname'+'}}'}, {'{{'+'aid'+'}}'} 등 변수가 자동 치환됩니다.
                         </p>
                       </div>
                     </>
@@ -893,6 +974,102 @@ export default function MessageTargetsPage() {
 
         </div>
       </div>
+
+      {/* ── Confirm Modal ── */}
+      {showConfirmModal && selectedTemplate && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+          onClick={e => { if (e.target === e.currentTarget && !sending) setShowConfirmModal(false); }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="text-base font-bold text-[#1a1a2e]">발송 확인</h2>
+              {!sending && (
+                <button
+                  onClick={() => { setShowConfirmModal(false); setSendError(null); }}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 transition-colors text-lg leading-none"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              {/* Channel + Template */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-gray-400 mb-1.5">채널</p>
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${CHANNEL_BADGE_CLASS[selectedTemplate.channel]}`}>
+                    {CHANNEL_LABELS[selectedTemplate.channel]}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">템플릿</p>
+                  <p className="text-sm font-semibold text-[#1a1a2e] leading-tight">{selectedTemplate.name}</p>
+                </div>
+              </div>
+
+              {/* Count */}
+              <div className="bg-[#28B8D1]/5 border border-[#28B8D1]/20 rounded-xl px-4 py-3">
+                <p className="text-sm font-bold text-[#1a1a2e]">
+                  정말 <span className="text-[#28B8D1]">{summary.selected}명</span>에게 발송하시겠습니까?
+                </p>
+                <div className="flex items-center gap-3 mt-1.5 text-xs">
+                  <span className="text-green-600 font-medium">발송 가능 {summary.canSend}명</span>
+                  {summary.cannotSend > 0 && (
+                    <span className="text-amber-500">제외(연락처 없음) {summary.cannotSend}명</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Preview list */}
+              <div>
+                <p className="text-xs text-gray-400 mb-2">발송 대상 미리보기 (앞 5명)</p>
+                <div className="space-y-1.5">
+                  {confirmPreviewTargets.map(t => (
+                    <div key={t.aid} className="flex items-center gap-2 text-xs bg-gray-50 rounded-lg px-3 py-1.5">
+                      <span className="font-mono text-gray-400 w-14 flex-shrink-0 truncate">{t.aid || '-'}</span>
+                      <span className="font-medium text-[#1a1a2e] w-16 flex-shrink-0 truncate">{t.nickname || '-'}</span>
+                      <span className="text-gray-400 truncate min-w-0">
+                        {selectedTemplate.channel === 'email'
+                          ? (t.email || '이메일 없음')
+                          : (t.phone || '번호 없음')}
+                      </span>
+                    </div>
+                  ))}
+                  {selectedTargets.length > 5 && (
+                    <p className="text-xs text-gray-400 pl-1">... 외 {selectedTargets.length - 5}명</p>
+                  )}
+                </div>
+              </div>
+
+              {sendError && (
+                <p className="text-xs text-[#FF7789] bg-[#FF7789]/5 rounded-xl px-3 py-2">{sendError}</p>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-100 flex gap-2">
+              <button
+                onClick={() => { if (!sending) { setShowConfirmModal(false); setSendError(null); } }}
+                disabled={sending}
+                className="flex-1 border border-gray-200 text-gray-500 py-2.5 rounded-xl text-sm font-medium hover:border-gray-300 disabled:opacity-50 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleSend}
+                disabled={sending}
+                className="flex-1 bg-[#28B8D1] text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-[#1fa8bf] disabled:opacity-60 transition-colors flex items-center justify-center gap-2"
+              >
+                {sending && (
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                )}
+                {sending ? '발송 중...' : `${summary.selected}명에게 발송`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -25,7 +25,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json() as Record<string, unknown>;
-    const { aid, nickname, email, phone, blog_url, class_type, status, memo, is_overseas_resident, is_first_time } = body as {
+    const { aid, nickname, email, phone, blog_url, class_type, status, memo, is_overseas_resident, is_first_time, challenge_month } = body as {
       aid?: string;
       nickname?: string;
       email?: string;
@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
       memo?: string;
       is_overseas_resident?: boolean;
       is_first_time?: boolean;
+      challenge_month?: string;
     };
 
     if (!email) {
@@ -61,6 +62,7 @@ export async function POST(request: NextRequest) {
         is_first_time: is_first_time ?? false,
         status: status || 'applied',
         memo: memo || null,
+        challenge_month: challenge_month || null,
       })
       .select()
       .single();

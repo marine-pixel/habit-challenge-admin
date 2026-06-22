@@ -57,6 +57,44 @@ export function buildAlimtalkVariables(
   return result;
 }
 
+export async function sendLmsMessage({
+  to,
+  subject,
+  text,
+}: {
+  to: string;
+  subject?: string;
+  text: string;
+}): Promise<void> {
+  const senderNumber = getEnvOrThrow('SOLAPI_SENDER_NUMBER');
+  const normalizedTo = to.replace(/\D/g, '');
+  if (!normalizedTo) throw new Error('수신자 휴대폰 번호가 유효하지 않습니다.');
+
+  const payload = {
+    message: {
+      to: normalizedTo,
+      from: senderNumber.replace(/\D/g, ''),
+      type: 'LMS',
+      subject: subject ?? '',
+      text,
+    },
+  };
+
+  const res = await fetch('https://api.solapi.com/messages/v4/send', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: buildAuthHeader(),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`SOLAPI LMS 응답 오류 (${res.status}): ${errText}`);
+  }
+}
+
 export async function sendAlimtalkMessage({
   to,
   templateId,

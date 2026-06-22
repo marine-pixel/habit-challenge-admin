@@ -43,6 +43,12 @@ export async function POST(request: NextRequest) {
     if (raw.channel === 'lms' && !raw.body?.trim()) {
       return Response.json({ error: 'LMS 채널은 본문이 필수입니다.' }, { status: 400 });
     }
+    if (raw.channel === 'email' && !raw.body?.trim()) {
+      return Response.json({ error: '이메일 채널은 본문이 필수입니다.' }, { status: 400 });
+    }
+    if (raw.channel === 'email' && !raw.title?.trim()) {
+      return Response.json({ error: '이메일 채널은 제목(이메일 제목)이 필수입니다.' }, { status: 400 });
+    }
     if (raw.channel === 'alimtalk' && !raw.solapi_template_code?.trim()) {
       return Response.json({ error: '알림톡 채널은 SOLAPI 템플릿 코드가 필수입니다.' }, { status: 400 });
     }
