@@ -8,17 +8,28 @@ function adminClient() {
   return createClient(url, key);
 }
 
+type RecruitmentSettings = {
+  id: string;
+  title: string | null;
+  is_open: boolean;
+  open_at: string | null;
+  close_at: string | null;
+  challenge_month: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export async function GET() {
   try {
     const supabase = adminClient();
+    const now = new Date().toISOString();
 
-    const [settingsResult, countResult, listResult] = await Promise.all([
+    const [allSettingsResult, countResult, listResult] = await Promise.all([
       supabase
         .from('recruitment_settings')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+        .order('challenge_month', { ascending: false })
+        .order('created_at', { ascending: false }),
       supabase
         .from('next_recruitment_notifications')
         .select('*', { count: 'exact', head: true }),
@@ -28,8 +39,20 @@ export async function GET() {
         .order('created_at', { ascending: false }),
     ]);
 
+    const allSettings: RecruitmentSettings[] = allSettingsResult.data ?? [];
+
+    // 활성 모집 판단: is_open=true && 날짜 범위 내 (updated_at 최신 우선)
+    const activeSettings =
+      allSettings.find((s) => {
+        if (!s.is_open) return false;
+        if (s.open_at && now < s.open_at) return false;
+        if (s.close_at && now >= s.close_at) return false;
+        return true;
+      }) ?? null;
+
     return Response.json({
-      settings: settingsResult.data ?? null,
+      settings: allSettings,
+      activeSettings,
       notificationCount: countResult.count ?? 0,
       notifications: listResult.data ?? [],
     });
@@ -50,11 +73,14 @@ export async function PATCH(request: NextRequest) {
       open_at?: string | null;
       close_at?: string | null;
       challenge_month?: string | null;
+      close_others?: boolean;
     };
 
     const supabase = adminClient();
+    const now = new Date().toISOString();
 
     if (body.id) {
+      // 기존 레코드 수정
       const { data, error } = await supabase
         .from('recruitment_settings')
         .update({
@@ -63,16 +89,26 @@ export async function PATCH(request: NextRequest) {
           open_at: body.open_at ?? null,
           close_at: body.close_at ?? null,
           challenge_month: body.challenge_month ?? null,
-          updated_at: new Date().toISOString(),
+          updated_at: now,
         })
         .eq('id', body.id)
         .select()
         .single();
 
       if (error) return Response.json({ error: error.message }, { status: 500 });
+
+      // is_open=true로 열 때 close_others가 true이면 나머지 모두 닫기
+      if (body.is_open && body.close_others) {
+        await supabase
+          .from('recruitment_settings')
+          .update({ is_open: false, updated_at: now })
+          .neq('id', body.id);
+      }
+
       return Response.json({ data });
     }
 
+    // 새 레코드 생성
     const { data, error } = await supabase
       .from('recruitment_settings')
       .insert({
@@ -86,6 +122,15 @@ export async function PATCH(request: NextRequest) {
       .single();
 
     if (error) return Response.json({ error: error.message }, { status: 500 });
+
+    // 새 레코드를 열 때 close_others가 true이면 나머지 모두 닫기
+    if (body.is_open && body.close_others && data.id) {
+      await supabase
+        .from('recruitment_settings')
+        .update({ is_open: false, updated_at: now })
+        .neq('id', data.id);
+    }
+
     return Response.json({ data }, { status: 201 });
   } catch (e) {
     return Response.json(

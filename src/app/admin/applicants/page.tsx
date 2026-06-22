@@ -99,7 +99,8 @@ export default function ApplicantsPage() {
   const [challengeMonthFilter, setChallengeMonthFilter] = useState('all');
   const [showDuplicates, setShowDuplicates] = useState(false);
 
-  // Current recruitment month (for form default)
+  // Recruitment months from settings (for filter and form default)
+  const [recruitmentMonths, setRecruitmentMonths] = useState<string[]>([]);
   const [currentRecruitmentMonth, setCurrentRecruitmentMonth] = useState('');
 
   // Selection + bulk actions
@@ -140,8 +141,21 @@ export default function ApplicantsPage() {
   useEffect(() => {
     fetch('/api/admin/recruitment')
       .then(r => r.json())
-      .then((d: { settings?: { challenge_month?: string | null } }) => {
-        if (d.settings?.challenge_month) setCurrentRecruitmentMonth(d.settings.challenge_month);
+      .then((d: {
+        settings?: Array<{ challenge_month?: string | null }>;
+        activeSettings?: { challenge_month?: string | null };
+      }) => {
+        // 모든 모집 회차의 challenge_month 목록
+        const months = (d.settings ?? [])
+          .map(s => s.challenge_month)
+          .filter((m): m is string => !!m);
+        setRecruitmentMonths(months);
+        // 신청자 추가 폼 기본값: 현재 활성 모집 월, 없으면 가장 최신 월
+        if (d.activeSettings?.challenge_month) {
+          setCurrentRecruitmentMonth(d.activeSettings.challenge_month);
+        } else if (months.length > 0) {
+          setCurrentRecruitmentMonth([...months].sort().reverse()[0]);
+        }
       })
       .catch(() => {});
   }, []);
@@ -165,15 +179,15 @@ export default function ApplicantsPage() {
     duplicates: duplicateAids.size,
   }), [applicants, duplicateAids]);
 
-  // Distinct months present in applicants data (sorted newest first)
+  // 모집 설정에 등록된 월 + 기존 신청자 데이터의 월 (정렬: 최신순)
   const availableMonths = useMemo(() => {
     const months = new Set<string>();
-    if (currentRecruitmentMonth) months.add(currentRecruitmentMonth);
+    for (const m of recruitmentMonths) months.add(m);
     for (const a of applicants) {
       if (a.challenge_month) months.add(a.challenge_month);
     }
     return [...months].sort().reverse();
-  }, [applicants, currentRecruitmentMonth]);
+  }, [applicants, recruitmentMonths]);
 
   const filtered = useMemo(() => {
     let list = showDuplicates

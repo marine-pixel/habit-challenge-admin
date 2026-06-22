@@ -21,10 +21,16 @@ function createSupabaseAdminClient() {
 export async function getRecruitmentSettings(): Promise<RecruitmentSettings | null> {
   try {
     const supabase = createSupabaseAdminClient();
+    const now = new Date().toISOString();
+
+    // 활성 모집: is_open=true && 날짜 범위 내 (updated_at 최신 우선)
     const { data, error } = await supabase
       .from('recruitment_settings')
       .select('*')
-      .order('created_at', { ascending: false })
+      .eq('is_open', true)
+      .or(`open_at.is.null,open_at.lte.${now}`)
+      .or(`close_at.is.null,close_at.gt.${now}`)
+      .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
