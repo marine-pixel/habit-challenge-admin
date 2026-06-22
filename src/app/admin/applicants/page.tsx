@@ -23,6 +23,12 @@ interface Applicant {
   memo: string | null;
   challenge_month: string | null;
   created_at: string;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  utm_content: string | null;
+  referrer_url: string | null;
+  landing_url: string | null;
 }
 
 interface FormValues {
@@ -40,6 +46,14 @@ interface FormValues {
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────
+const SOURCE_LABELS: Record<string, string> = {
+  email: '이메일',
+  kakao_openchat: '단톡방',
+  lms: 'LMS',
+  instagram: '인스타그램',
+  etc: '기타',
+};
+
 const STATUS_LABELS: Record<string, string> = {
   applied: '신청완료',
   paid: '입금완료',
@@ -97,6 +111,7 @@ export default function ApplicantsPage() {
   const [overseasFilter, setOverseasFilter] = useState<'all' | 'yes' | 'no'>('all');
   const [firstTimeFilter, setFirstTimeFilter] = useState<'all' | 'yes' | 'no'>('all');
   const [challengeMonthFilter, setChallengeMonthFilter] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('all');
   const [showDuplicates, setShowDuplicates] = useState(false);
 
   // Recruitment months from settings (for filter and form default)
@@ -216,8 +231,16 @@ export default function ApplicantsPage() {
 
     if (challengeMonthFilter !== 'all') list = list.filter(a => a.challenge_month === challengeMonthFilter);
 
+    if (sourceFilter !== 'all') {
+      if (sourceFilter === 'none') {
+        list = list.filter(a => !a.utm_source);
+      } else {
+        list = list.filter(a => a.utm_source === sourceFilter);
+      }
+    }
+
     return list;
-  }, [applicants, search, statusFilter, classFilter, overseasFilter, firstTimeFilter, challengeMonthFilter, showDuplicates, duplicateAids]);
+  }, [applicants, search, statusFilter, classFilter, overseasFilter, firstTimeFilter, challengeMonthFilter, sourceFilter, showDuplicates, duplicateAids]);
 
   // ── Selection ────────────────────────────────────────────────────────────
   const allSelected = filtered.length > 0 && selectedIds.size === filtered.length;
@@ -421,6 +444,7 @@ export default function ApplicantsPage() {
     const headers = [
       'AID', '이름', '이메일', '휴대폰', '블로그 URL',
       '참여 반', '전체 글 목표', '제휴링크 콘텐츠 목표', '상태', '해외거주', '첫 참여 여부', '챌린지 월', '메모', '신청일시',
+      'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'referrer_url', 'landing_url',
     ];
     const rows = filtered.map(a => [
       a.aid ?? '',
@@ -437,6 +461,12 @@ export default function ApplicantsPage() {
       a.challenge_month ?? '',
       a.memo ?? '',
       formatDateTime(a.created_at),
+      a.utm_source ?? '',
+      a.utm_medium ?? '',
+      a.utm_campaign ?? '',
+      a.utm_content ?? '',
+      a.referrer_url ?? '',
+      a.landing_url ?? '',
     ]);
     const csv = [headers, ...rows]
       .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
@@ -586,6 +616,19 @@ export default function ApplicantsPage() {
               <option value="yes">첫 참여 체크</option>
               <option value="no">첫 참여 미체크</option>
             </select>
+            <select
+              value={sourceFilter}
+              onChange={e => setSourceFilter(e.target.value)}
+              className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#28B8D1] bg-white text-gray-600"
+            >
+              <option value="all">유입 전체</option>
+              <option value="email">이메일</option>
+              <option value="kakao_openchat">단톡방</option>
+              <option value="lms">LMS</option>
+              <option value="instagram">인스타그램</option>
+              <option value="etc">기타</option>
+              <option value="none">출처 없음</option>
+            </select>
             <button
               onClick={() => setShowDuplicates(v => !v)}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium border transition-colors ${
@@ -684,6 +727,7 @@ export default function ApplicantsPage() {
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">상태</th>
                   <th className="px-3 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wide" title="해외 거주/체류 여부">해외</th>
                   <th className="px-3 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wide" title="첫 참여 여부">첫 참여</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">유입 출처</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">메모</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">신청일시</th>
                 </tr>
@@ -691,7 +735,7 @@ export default function ApplicantsPage() {
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={12} className="text-center py-14 text-gray-300 text-sm">
+                    <td colSpan={13} className="text-center py-14 text-gray-300 text-sm">
                       신청자가 없습니다.
                     </td>
                   </tr>
@@ -806,6 +850,22 @@ export default function ApplicantsPage() {
                             </span>
                           ) : (
                             <span className="text-gray-300">-</span>
+                          )}
+                        </td>
+
+                        {/* 유입 출처 */}
+                        <td className="px-3 py-3">
+                          {a.utm_source ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#28B8D1]/10 text-[#28B8D1] w-fit">
+                                {SOURCE_LABELS[a.utm_source] ?? a.utm_source}
+                              </span>
+                              {a.utm_content && (
+                                <span className="text-[10px] text-gray-400 font-mono">{a.utm_content}</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-gray-300">출처 없음</span>
                           )}
                         </td>
 

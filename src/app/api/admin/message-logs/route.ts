@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     const channel = searchParams.get('channel');
     const status = searchParams.get('status');
     const triggerType = searchParams.get('trigger_type');
+    const testFilter = searchParams.get('test_filter'); // 'test' | 'real' | null
     const limit = Math.min(parseInt(searchParams.get('limit') ?? '100', 10), 500);
 
     const supabase = adminClient();
@@ -26,6 +27,8 @@ export async function GET(request: NextRequest) {
     if (channel) query = query.eq('channel', channel);
     if (status) query = query.eq('status', status);
     if (triggerType) query = query.eq('trigger_type', triggerType);
+    if (testFilter === 'test') query = query.eq('trigger_type', 'test_send');
+    if (testFilter === 'real') query = query.neq('trigger_type', 'test_send');
 
     const { data, error } = await query;
     if (error) return Response.json({ error: error.message }, { status: 500 });

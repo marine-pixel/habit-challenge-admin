@@ -1,6 +1,6 @@
 type Channel = 'alimtalk' | 'lms' | 'email';
 type Provider = 'solapi' | 'gmail_smtp';
-type TriggerType = 'application_created' | 'payment_marked_paid' | 'manual_send';
+type TriggerType = 'application_created' | 'payment_marked_paid' | 'manual_send' | 'test_send';
 type LogStatus = 'success' | 'failed' | 'skipped';
 
 interface LogMessageSendParams {

@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-type Channel = 'alimtalk' | 'email';
+type Channel = 'alimtalk' | 'lms' | 'email';
 type LogStatus = 'success' | 'failed' | 'skipped';
-type TriggerType = 'application_created' | 'payment_marked_paid';
+type TriggerType = 'application_created' | 'payment_marked_paid' | 'manual_send' | 'test_send';
 
 interface MessageLog {
   id: string;
@@ -24,9 +24,10 @@ interface MessageLog {
   created_at: string;
 }
 
-const CHANNEL_LABELS: Record<Channel, string> = { alimtalk: '알림톡', email: '이메일' };
-const CHANNEL_BADGE: Record<Channel, string> = {
+const CHANNEL_LABELS: Record<string, string> = { alimtalk: '알림톡', lms: 'LMS', email: '이메일' };
+const CHANNEL_BADGE: Record<string, string> = {
   alimtalk: 'bg-[#28B8D1]/10 text-[#28B8D1] border border-[#28B8D1]/20',
+  lms: 'bg-[#FF7789]/10 text-[#FF7789] border border-[#FF7789]/20',
   email: 'bg-purple-100 text-purple-700 border border-purple-200',
 };
 const STATUS_LABELS: Record<LogStatus, string> = { success: '성공', failed: '실패', skipped: '건너뜀' };
@@ -35,10 +36,16 @@ const STATUS_BADGE: Record<LogStatus, string> = {
   failed: 'bg-[#FF7789]/10 text-[#FF7789]',
   skipped: 'bg-gray-100 text-gray-500',
 };
-const TRIGGER_LABELS: Record<TriggerType, string> = {
+const TRIGGER_LABELS: Record<string, string> = {
   application_created: '신청 완료',
   payment_marked_paid: '입금완료 변경',
+  manual_send: '수동 발송',
+  test_send: '테스트 발송',
 };
+
+function isTestLog(log: MessageLog): boolean {
+  return log.trigger_type === 'test_send' || log.metadata?.is_test === true;
+}
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleString('ko-KR', {
@@ -55,6 +62,10 @@ export default function MessageLogsPage() {
   const [channelFilter, setChannelFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [triggerFilter, setTriggerFilter] = useState('');
+  const [testFilter, setTestFilter] = useState('');
+
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
@@ -63,7 +74,12 @@ export default function MessageLogsPage() {
       const params = new URLSearchParams();
       if (channelFilter) params.set('channel', channelFilter);
       if (statusFilter) params.set('status', statusFilter);
-      if (triggerFilter) params.set('trigger_type', triggerFilter);
+      // test_filter takes precedence over trigger_type filter
+      if (testFilter) {
+        params.set('test_filter', testFilter);
+      } else if (triggerFilter) {
+        params.set('trigger_type', triggerFilter);
+      }
       const res = await fetch(`/api/admin/message-logs?${params.toString()}`);
       if (!res.ok) {
         const err = await res.json().catch(() => ({})) as { error?: string };
@@ -76,15 +92,33 @@ export default function MessageLogsPage() {
     } finally {
       setLoading(false);
     }
-  }, [channelFilter, statusFilter, triggerFilter]);
+  }, [channelFilter, statusFilter, triggerFilter, testFilter]);
 
   useEffect(() => { void fetchLogs(); }, [fetchLogs]);
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    setConfirmDeleteId(null);
+    try {
+      const res = await fetch(`/api/admin/message-logs/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(err.error ?? '삭제 실패');
+      }
+      setLogs(prev => prev.filter(l => l.id !== id));
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '삭제 중 오류가 발생했습니다.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const summary = {
     total: logs.length,
     success: logs.filter(l => l.status === 'success').length,
     failed: logs.filter(l => l.status === 'failed').length,
     skipped: logs.filter(l => l.status === 'skipped').length,
+    test: logs.filter(isTestLog).length,
   };
 
   return (
@@ -110,12 +144,13 @@ export default function MessageLogsPage() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
           {[
             { label: '전체', value: summary.total, color: 'text-[#1a1a2e]', dot: 'bg-gray-300' },
             { label: '성공', value: summary.success, color: 'text-green-600', dot: 'bg-green-500' },
             { label: '실패', value: summary.failed, color: 'text-[#FF7789]', dot: 'bg-[#FF7789]' },
             { label: '건너뜀', value: summary.skipped, color: 'text-gray-500', dot: 'bg-gray-400' },
+            { label: '테스트', value: summary.test, color: 'text-amber-600', dot: 'bg-amber-400' },
           ].map(({ label, value, color, dot }) => (
             <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex flex-col gap-1">
               <div className="flex items-center gap-1.5">
@@ -130,6 +165,16 @@ export default function MessageLogsPage() {
         {/* Filters */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4">
           <div className="flex flex-wrap gap-3">
+            {/* 실제/테스트 필터 — 가장 눈에 띄게 앞에 */}
+            <select
+              value={testFilter}
+              onChange={e => { setTestFilter(e.target.value); setTriggerFilter(''); }}
+              className="border border-amber-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-amber-400 bg-amber-50 text-amber-700 font-medium"
+            >
+              <option value="">전체 (실제+테스트)</option>
+              <option value="real">실제 발송</option>
+              <option value="test">테스트 발송</option>
+            </select>
             <select
               value={channelFilter}
               onChange={e => setChannelFilter(e.target.value)}
@@ -137,6 +182,7 @@ export default function MessageLogsPage() {
             >
               <option value="">전체 채널</option>
               <option value="alimtalk">알림톡</option>
+              <option value="lms">LMS</option>
               <option value="email">이메일</option>
             </select>
             <select
@@ -151,12 +197,15 @@ export default function MessageLogsPage() {
             </select>
             <select
               value={triggerFilter}
-              onChange={e => setTriggerFilter(e.target.value)}
+              onChange={e => { setTriggerFilter(e.target.value); setTestFilter(''); }}
               className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#28B8D1] bg-white text-gray-600"
+              disabled={!!testFilter}
             >
               <option value="">전체 트리거</option>
               <option value="application_created">신청 완료</option>
               <option value="payment_marked_paid">입금완료 변경</option>
+              <option value="manual_send">수동 발송</option>
+              <option value="test_send">테스트 발송</option>
             </select>
           </div>
         </div>
@@ -182,7 +231,7 @@ export default function MessageLogsPage() {
               <table className="w-full text-sm whitespace-nowrap">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50/70">
-                    {['발송일시', '채널', '트리거', '템플릿명', 'AID', '이름', '전화번호', '이메일', '상태', '에러'].map(col => (
+                    {['발송일시', '구분', '채널', '트리거', '템플릿명', 'AID', '이름', '전화번호', '이메일', '상태', '에러', ''].map(col => (
                       <th key={col} className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">
                         {col}
                       </th>
@@ -190,51 +239,87 @@ export default function MessageLogsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.map(log => (
-                    <tr key={log.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                      <td className="px-4 py-3 text-xs text-gray-400 tabular-nums">
-                        {formatDate(log.created_at)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full ${CHANNEL_BADGE[log.channel] ?? 'bg-gray-100 text-gray-600'}`}>
-                          {CHANNEL_LABELS[log.channel] ?? log.channel}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-600">
-                        {TRIGGER_LABELS[log.trigger_type] ?? log.trigger_type}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-700 max-w-[160px]">
-                        <div className="truncate" title={log.template_name}>{log.template_name}</div>
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-gray-500">
-                        {log.aid ?? <span className="text-gray-300">-</span>}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-700">
-                        {log.recipient_name ?? <span className="text-gray-300">-</span>}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-500">
-                        {log.recipient_phone ?? <span className="text-gray-300">-</span>}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-500 max-w-[160px]">
-                        <div className="truncate" title={log.recipient_email ?? ''}>
-                          {log.recipient_email ?? <span className="text-gray-300">-</span>}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_BADGE[log.status] ?? 'bg-gray-100 text-gray-500'}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${log.status === 'success' ? 'bg-green-500' : log.status === 'failed' ? 'bg-[#FF7789]' : 'bg-gray-400'}`} />
-                          {STATUS_LABELS[log.status] ?? log.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-[#FF7789] max-w-[200px]">
-                        {log.error_message ? (
-                          <div className="truncate" title={log.error_message}>{log.error_message}</div>
-                        ) : (
-                          <span className="text-gray-300">-</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {logs.map(log => {
+                    const test = isTestLog(log);
+                    return (
+                      <tr
+                        key={log.id}
+                        className={`border-b border-gray-50 transition-colors ${test ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-gray-50/50'}`}
+                      >
+                        <td className="px-4 py-3 text-xs text-gray-400 tabular-nums">
+                          {formatDate(log.created_at)}
+                        </td>
+
+                        {/* 구분: 테스트 / 실제 */}
+                        <td className="px-4 py-3">
+                          {test ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
+                              테스트
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                              실제
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full ${CHANNEL_BADGE[log.channel] ?? 'bg-gray-100 text-gray-600'}`}>
+                            {CHANNEL_LABELS[log.channel] ?? log.channel}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-600">
+                          {TRIGGER_LABELS[log.trigger_type] ?? log.trigger_type}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-700 max-w-[160px]">
+                          <div className="truncate" title={log.template_name}>{log.template_name}</div>
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs text-gray-500">
+                          {log.aid ?? <span className="text-gray-300">-</span>}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-700">
+                          {log.recipient_name ?? <span className="text-gray-300">-</span>}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-500">
+                          {log.recipient_phone ?? <span className="text-gray-300">-</span>}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-500 max-w-[160px]">
+                          <div className="truncate" title={log.recipient_email ?? ''}>
+                            {log.recipient_email ?? <span className="text-gray-300">-</span>}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_BADGE[log.status] ?? 'bg-gray-100 text-gray-500'}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${log.status === 'success' ? 'bg-green-500' : log.status === 'failed' ? 'bg-[#FF7789]' : 'bg-gray-400'}`} />
+                            {STATUS_LABELS[log.status] ?? log.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-[#FF7789] max-w-[200px]">
+                          {log.error_message ? (
+                            <div className="truncate" title={log.error_message}>{log.error_message}</div>
+                          ) : (
+                            <span className="text-gray-300">-</span>
+                          )}
+                        </td>
+
+                        {/* 삭제 버튼 — 테스트 로그만 표시 */}
+                        <td className="px-4 py-3">
+                          {test ? (
+                            <button
+                              onClick={() => setConfirmDeleteId(log.id)}
+                              disabled={deletingId === log.id}
+                              className="text-[11px] px-2.5 py-1 rounded-lg border border-[#FF7789]/30 text-[#FF7789] hover:bg-[#FF7789]/5 disabled:opacity-40 transition-colors"
+                            >
+                              {deletingId === log.id ? '삭제 중...' : '삭제'}
+                            </button>
+                          ) : (
+                            <span className="w-[52px] inline-block" />
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -246,6 +331,36 @@ export default function MessageLogsPage() {
           )}
         </div>
       </div>
+
+      {/* 삭제 확인 모달 */}
+      {confirmDeleteId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+          onClick={e => { if (e.target === e.currentTarget) setConfirmDeleteId(null); }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <h2 className="text-base font-bold text-[#1a1a2e] mb-2">테스트 발송 로그 삭제</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              이 테스트 발송 로그를 삭제할까요?<br />
+              <span className="text-xs text-gray-400 mt-1 block">삭제 후 복구할 수 없습니다.</span>
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                className="flex-1 border border-gray-200 text-gray-500 py-2.5 rounded-xl text-sm font-medium hover:border-gray-300 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => void handleDelete(confirmDeleteId)}
+                className="flex-1 bg-[#FF7789] text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-[#ff5f72] transition-colors"
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

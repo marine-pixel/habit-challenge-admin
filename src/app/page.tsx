@@ -169,6 +169,80 @@ function HeroSection({ isOpen }: { isOpen: boolean }) {
   );
 }
 
+// ─── 습관챌린지란? ─────────────────────────────────────────────────
+function WhatIsSection() {
+  const points = [
+    {
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      ),
+      text: '매주 정해진 횟수만큼 글을 쓰고 제출하고',
+      accent: false,
+    },
+    {
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+      ),
+      text: '피드백과 주차별 목표로 방향을 잡고',
+      accent: false,
+    },
+    {
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+        </svg>
+      ),
+      text: '완주하면 참가비가 리워드로 돌아와요',
+      accent: true,
+    },
+  ];
+
+  return (
+    <section className="py-20 sm:py-24 bg-white">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
+          <SectionBadge>습관챌린지란?</SectionBadge>
+          <p className="text-2xl sm:text-3xl font-bold text-[#1a1a2e] leading-snug">
+            세시간전 습관챌린지는<br />
+            블로그로 수익화하려는 크리에이터가<br />
+            3주 동안 글쓰기 루틴을 만드는 프로그램이에요.
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-stretch justify-center gap-4 max-w-3xl mx-auto">
+          {points.map((pt, i) => (
+            <div
+              key={i}
+              className={`flex-1 flex items-start gap-3 rounded-2xl px-6 py-5 border ${
+                pt.accent
+                  ? 'bg-[#FF7789]/6 border-[#FF7789]/20'
+                  : 'bg-[#28B8D1]/5 border-[#28B8D1]/15'
+              }`}
+            >
+              <div
+                className={`mt-0.5 w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                  pt.accent
+                    ? 'bg-[#FF7789]/15 text-[#FF7789]'
+                    : 'bg-[#28B8D1]/15 text-[#28B8D1]'
+                }`}
+              >
+                {pt.icon}
+              </div>
+              <p className={`text-sm font-semibold leading-snug mt-1.5 ${pt.accent ? 'text-[#FF7789]' : 'text-[#1a1a2e]'}`}>
+                {pt.text}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ─── 추천 대상 ─────────────────────────────────────────────────────
 function TargetSection() {
   const targets = [
@@ -267,92 +341,131 @@ function ResultsSection() {
 
 // ─── 혜택 ──────────────────────────────────────────────────────────
 function BenefitsSection() {
-  const benefits = [
+  const rewardSteps = [
+    { week: '1주 완주', amount: '10,000원 리워드 지급' },
+    { week: '2주 완주', amount: '10,000원 리워드 지급' },
+    { week: '3주 완주', amount: '10,000원 리워드 지급' },
+  ];
+
+  const cards = [
     {
       icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
       ),
-      title: '전용 단톡방 운영',
-      points: ['글 쓰다가 생기는 고민을 그때그때 해결', '혼자 고민하느라 시간 낭비하지 않기'],
+      title: '막히는 순간, 바로 해결돼요',
+      desc: '글 쓰다 막히면 단톡방에 올리면 돼요. 혼자 끙끙대는 시간이 없어집니다.',
     },
     {
       icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
         </svg>
       ),
-      title: '피드백 게시판 운영',
-      points: ['내 콘텐츠가 잘 가고 있는지 체크', '막히는 지점과 개선 방향을 빠르게 확인'],
+      title: '내 글이 맞는 방향인지 매주 확인해요',
+      desc: '잘 쓰고 있는 건지 확신이 없어도 괜찮아요. 피드백 게시판에서 매주 방향을 잡아드려요.',
     },
     {
       icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
         </svg>
       ),
-      title: '챌린지 전용 자료 & 강의 제공',
-      points: ['수익화 글쓰기 기초부터 적용 팁까지', '초보도 따라오기 쉬운 구성'],
+      title: '초보도 따라올 수 있는 자료가 다 있어요',
+      desc: '수익화 글쓰기 기초부터 실전 팁까지, 챌린지 전용 자료와 강의로 제공돼요. 뭘 써야 할지 몰라도 시작할 수 있어요.',
     },
   ];
 
   return (
     <section id="benefits" className="py-20 sm:py-24 bg-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-14">
-          <SectionBadge>혜택</SectionBadge>
-          <SectionTitle>피드백+강의+질문으로 &lsquo;잘 쓰는 루틴&rsquo;을 만들어요</SectionTitle>
+
+        {/* Header */}
+        <div className="text-center mb-12">
+          <SectionBadge color="accent">참여 혜택</SectionBadge>
+          <SectionTitle>완주하면, 참가비가 리워드로 돌아와요</SectionTitle>
+          <p className="text-gray-500 mt-4 max-w-xl mx-auto text-sm leading-relaxed">
+            참가비 30,000원 — 3주 모두 완주하면 전액 리워드로 환급됩니다.<br />
+            사실상 0원으로 글쓰기 루틴을 만드는 거예요.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-          {benefits.map((b, i) => (
+        {/* 환급 구조 블록 */}
+        <div className="bg-[#FF7789]/6 border border-[#FF7789]/20 rounded-2xl px-7 py-8 mb-8">
+          <div className="flex items-center gap-2.5 mb-6">
+            <span className="text-2xl">🎁</span>
+            <p className="text-base font-bold text-[#1a1a2e]">참가비 30,000원</p>
+          </div>
+
+          {/* 스텝 */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-0 mb-6">
+            {rewardSteps.map((step, i) => (
+              <div key={i} className="flex sm:flex-1 items-center gap-3 sm:gap-0">
+                <div className="flex-1 flex flex-col sm:items-center bg-white rounded-xl border border-[#FF7789]/20 px-5 py-4 shadow-sm">
+                  <span className="text-xs font-bold text-[#FF7789] mb-1">{step.week}</span>
+                  <span className="text-sm font-semibold text-[#1a1a2e]">{step.amount}</span>
+                </div>
+                {i < rewardSteps.length - 1 && (
+                  <svg className="w-5 h-5 text-[#FF7789]/40 flex-shrink-0 sm:mx-2 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                )}
+                {i < rewardSteps.length - 1 && (
+                  <svg className="w-4 h-4 text-[#FF7789]/40 flex-shrink-0 sm:hidden rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* 강조 문구 */}
+          <div className="bg-[#FF7789] rounded-xl px-5 py-3.5 mb-4 text-center">
+            <p className="font-bold text-white text-base">
+              3주 모두 완주 = 30,000원 전액 리워드 환급
+            </p>
+          </div>
+
+          {/* 보조 문구 */}
+          <div className="space-y-1.5">
+            <p className="flex items-start gap-2 text-sm text-gray-500">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FF7789]/50 mt-1.5 flex-shrink-0" />
+              완주 못 한 주는 리워드가 지급되지 않아요. 그게 매주 쓰게 만드는 이유가 됩니다.
+            </p>
+            <p className="flex items-start gap-2 text-sm text-gray-500">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FF7789]/50 mt-1.5 flex-shrink-0" />
+              매주 완주자에게는 리워드 외에 추가 혜택도 랜덤으로 지급돼요.
+            </p>
+          </div>
+        </div>
+
+        {/* 혜택 카드 3개 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
+          {cards.map((c, i) => (
             <div
               key={i}
               className="bg-[#F2F2F7] rounded-2xl p-7 hover:bg-white hover:shadow-md hover:border hover:border-gray-100 transition-all duration-200"
             >
-              <div className="w-10 h-10 rounded-xl bg-[#28B8D1]/15 text-[#28B8D1] flex items-center justify-center mb-4 [&_svg]:w-5 [&_svg]:h-5">
-                {b.icon}
+              <div className="w-10 h-10 rounded-xl bg-[#28B8D1]/15 text-[#28B8D1] flex items-center justify-center mb-4">
+                {c.icon}
               </div>
-              <h3 className="font-bold text-[#1a1a2e] text-xl mb-4">{b.title}</h3>
-              <ul className="space-y-2">
-                {b.points.map((pt, j) => (
-                  <li key={j} className="flex items-start gap-2 text-sm text-gray-500">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#28B8D1] mt-1.5 flex-shrink-0" />
-                    {pt}
-                  </li>
-                ))}
-              </ul>
+              <h3 className="font-bold text-[#1a1a2e] text-lg mb-3 leading-snug">{c.title}</h3>
+              <p className="text-gray-500 text-sm leading-relaxed">{c.desc}</p>
             </div>
           ))}
         </div>
 
-        {/* Reward cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-8">
-          <div className="flex items-center gap-5 bg-[#FF7789]/8 border border-[#FF7789]/20 rounded-2xl px-7 py-6">
-            <span className="text-3xl flex-shrink-0">🎁</span>
-            <div>
-              <p className="text-sm text-gray-400 font-medium mb-1">완주 혜택</p>
-              <p className="text-lg font-bold text-[#FF7789]">참가비 100% 리워드로 환급</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-5 bg-[#FF7789]/8 border border-[#FF7789]/20 rounded-2xl px-7 py-6">
-            <span className="text-3xl flex-shrink-0">🏆</span>
-            <div>
-              <p className="text-sm text-gray-400 font-medium mb-1">주간 혜택</p>
-              <p className="text-lg font-bold text-[#FF7789]">주간 리워드 매주 랜덤 지급</p>
-            </div>
-          </div>
-        </div>
-
+        {/* CTA */}
         <div className="text-center">
           <a
             href="#apply"
             className="inline-flex items-center justify-center bg-[#FF7789] text-white px-10 py-4 rounded-full font-bold text-base hover:bg-[#ff5f72] transition-all duration-200 shadow-lg shadow-[#FF7789]/25"
           >
-            1분 만에 신청하기 →
+            지금 신청하고 리워드 받기 →
           </a>
         </div>
+
       </div>
     </section>
   );
@@ -515,6 +628,7 @@ export default async function Home() {
       <Navbar />
       <main>
         <HeroSection isOpen={isOpen} />
+        <WhatIsSection />
         <TargetSection />
         <ResultsSection />
         <BenefitsSection />

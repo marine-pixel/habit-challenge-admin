@@ -7,6 +7,7 @@ import { useState } from 'react';
 const NAV_ITEMS = [
   { label: '모집 설정', href: '/admin/recruitment' },
   { label: '신청자 관리', href: '/admin/applicants' },
+  { label: '신청 유입', href: '/admin/acquisition' },
   { label: '메시지 관리', href: '/admin/messages' },
   { label: '발송 대상', href: '/admin/message-targets' },
   { label: '발송 로그', href: '/admin/message-logs' },

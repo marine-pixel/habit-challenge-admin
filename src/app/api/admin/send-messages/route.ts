@@ -10,6 +10,7 @@ import { substituteEmailVariables, buildHtmlFromTemplateBody } from '@/lib/email
 interface RequestBody {
   template_id: string;
   aids: string[];
+  is_test?: boolean;
 }
 
 interface TemplateRow {
@@ -89,13 +90,15 @@ async function sendOneAlimtalk(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
   template: TemplateRow,
-  applicant: ApplicantRow
+  applicant: ApplicantRow,
+  triggerType: 'manual_send' | 'test_send',
+  metadata: Record<string, unknown>
 ): Promise<SendStatus> {
   const logBase = {
     supabase,
     channel: 'alimtalk' as const,
     provider: 'solapi' as const,
-    trigger_type: 'manual_send' as const,
+    trigger_type: triggerType,
     template_name: template.name,
     template_code: template.solapi_template_code ?? null,
     applicant_id: applicant.id,
@@ -103,7 +106,7 @@ async function sendOneAlimtalk(
     recipient_name: applicant.nickname ?? null,
     recipient_phone: applicant.phone ?? null,
     recipient_email: applicant.email ?? null,
-    metadata: { manual_send: true } as Record<string, unknown>,
+    metadata,
   };
 
   if (!applicant.phone) {
@@ -145,13 +148,15 @@ async function sendOneLms(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
   template: TemplateRow,
-  applicant: ApplicantRow
+  applicant: ApplicantRow,
+  triggerType: 'manual_send' | 'test_send',
+  metadata: Record<string, unknown>
 ): Promise<SendStatus> {
   const logBase = {
     supabase,
     channel: 'lms' as const,
     provider: 'solapi' as const,
-    trigger_type: 'manual_send' as const,
+    trigger_type: triggerType,
     template_name: template.name,
     template_code: template.solapi_template_code ?? null,
     applicant_id: applicant.id,
@@ -159,7 +164,7 @@ async function sendOneLms(
     recipient_name: applicant.nickname ?? null,
     recipient_phone: applicant.phone ?? null,
     recipient_email: applicant.email ?? null,
-    metadata: { manual_send: true } as Record<string, unknown>,
+    metadata,
   };
 
   if (!applicant.phone) {
@@ -192,13 +197,15 @@ async function sendOneEmail(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
   template: TemplateRow,
-  applicant: ApplicantRow
+  applicant: ApplicantRow,
+  triggerType: 'manual_send' | 'test_send',
+  metadata: Record<string, unknown>
 ): Promise<SendStatus> {
   const logBase = {
     supabase,
     channel: 'email' as const,
     provider: 'gmail_smtp' as const,
-    trigger_type: 'manual_send' as const,
+    trigger_type: triggerType,
     template_name: template.name,
     template_code: template.solapi_template_code ?? null,
     applicant_id: applicant.id,
@@ -206,7 +213,7 @@ async function sendOneEmail(
     recipient_name: applicant.nickname ?? null,
     recipient_phone: applicant.phone ?? null,
     recipient_email: applicant.email ?? null,
-    metadata: { manual_send: true } as Record<string, unknown>,
+    metadata,
   };
 
   if (!applicant.email) {
@@ -241,7 +248,10 @@ async function sendOneEmail(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json() as RequestBody;
-    const { template_id, aids } = body;
+    const { template_id, aids, is_test } = body;
+    const triggerType = is_test ? 'test_send' as const : 'manual_send' as const;
+    const baseMetadata: Record<string, unknown> = { manual_send: true };
+    if (is_test) baseMetadata.is_test = true;
 
     if (!template_id) {
       return Response.json({ error: 'template_id는 필수입니다.' }, { status: 400 });
@@ -295,35 +305,35 @@ export async function POST(request: NextRequest) {
             supabase,
             channel: template.channel as 'alimtalk' | 'lms' | 'email',
             provider: template.channel === 'email' ? 'gmail_smtp' : 'solapi',
-            trigger_type: 'manual_send',
+            trigger_type: triggerType,
             template_name: template.name,
             status: 'skipped',
             aid,
             error_message: 'AID에 해당하는 신청자 없음',
-            metadata: { manual_send: true },
+            metadata: baseMetadata,
           });
           return 'skipped';
         }
 
         switch (template.channel) {
           case 'alimtalk':
-            return sendOneAlimtalk(supabase, template, applicant);
+            return sendOneAlimtalk(supabase, template, applicant, triggerType, baseMetadata);
           case 'lms':
-            return sendOneLms(supabase, template, applicant);
+            return sendOneLms(supabase, template, applicant, triggerType, baseMetadata);
           case 'email':
-            return sendOneEmail(supabase, template, applicant);
+            return sendOneEmail(supabase, template, applicant, triggerType, baseMetadata);
           default:
             await logMessageSend({
               supabase,
               channel: 'alimtalk',
               provider: 'solapi',
-              trigger_type: 'manual_send',
+              trigger_type: triggerType,
               template_name: template.name,
               status: 'failed',
               applicant_id: applicant.id,
               aid: applicant.aid ?? null,
               error_message: `지원하지 않는 채널: ${template.channel}`,
-              metadata: { manual_send: true },
+              metadata: baseMetadata,
             });
             return 'failed';
         }

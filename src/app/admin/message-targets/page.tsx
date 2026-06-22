@@ -196,6 +196,7 @@ export default function MessageTargetsPage() {
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState<SendResult | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [isTestSend, setIsTestSend] = useState(false);
 
   // ── Load active templates ──
   useEffect(() => {
@@ -374,6 +375,7 @@ export default function MessageTargetsPage() {
         body: JSON.stringify({
           template_id: selectedTemplate.id,
           aids: Array.from(selectedAids),
+          is_test: isTestSend,
         }),
       });
       const json = await res.json() as {
@@ -1046,11 +1048,26 @@ export default function MessageTargetsPage() {
               {sendError && (
                 <p className="text-xs text-[#FF7789] bg-[#FF7789]/5 rounded-xl px-3 py-2">{sendError}</p>
               )}
+
+              {/* 테스트 발송 체크박스 */}
+              <label className="flex items-start gap-3 cursor-pointer bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+                <input
+                  type="checkbox"
+                  checked={isTestSend}
+                  onChange={e => setIsTestSend(e.target.checked)}
+                  disabled={sending}
+                  className="mt-0.5 w-4 h-4 rounded border-gray-300 accent-amber-500 cursor-pointer flex-shrink-0"
+                />
+                <span className="text-xs text-amber-700">
+                  <span className="font-bold">테스트 발송으로 기록</span>
+                  <span className="block text-amber-600 mt-0.5">체크 시 발송 로그에 "테스트" 배지가 표시되며, 해당 로그를 삭제할 수 있습니다.</span>
+                </span>
+              </label>
             </div>
 
             <div className="px-6 py-4 border-t border-gray-100 flex gap-2">
               <button
-                onClick={() => { if (!sending) { setShowConfirmModal(false); setSendError(null); } }}
+                onClick={() => { if (!sending) { setShowConfirmModal(false); setSendError(null); setIsTestSend(false); } }}
                 disabled={sending}
                 className="flex-1 border border-gray-200 text-gray-500 py-2.5 rounded-xl text-sm font-medium hover:border-gray-300 disabled:opacity-50 transition-colors"
               >
@@ -1059,12 +1076,16 @@ export default function MessageTargetsPage() {
               <button
                 onClick={handleSend}
                 disabled={sending}
-                className="flex-1 bg-[#28B8D1] text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-[#1fa8bf] disabled:opacity-60 transition-colors flex items-center justify-center gap-2"
+                className={`flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60 transition-colors flex items-center justify-center gap-2 ${
+                  isTestSend
+                    ? 'bg-amber-500 text-white hover:bg-amber-600'
+                    : 'bg-[#28B8D1] text-white hover:bg-[#1fa8bf]'
+                }`}
               >
                 {sending && (
                   <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin flex-shrink-0" />
                 )}
-                {sending ? '발송 중...' : `${summary.selected}명에게 발송`}
+                {sending ? '발송 중...' : isTestSend ? `테스트로 ${summary.selected}명에게 발송` : `${summary.selected}명에게 발송`}
               </button>
             </div>
           </div>

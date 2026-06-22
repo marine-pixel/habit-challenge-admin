@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: '잘못된 요청입니다.' }, { status: 400 });
   }
 
-  const { aid, nickname, email, phone, blog_url, class_type, goal, privacy_agreed, is_overseas_resident, is_first_time } = body as {
+  const { aid, nickname, email, phone, blog_url, class_type, goal, privacy_agreed, is_overseas_resident, is_first_time, utm_source, utm_medium, utm_campaign, utm_content, referrer_url, landing_url } = body as {
     aid: string;
     nickname: string;
     email: string;
@@ -39,6 +39,12 @@ export async function POST(request: NextRequest) {
     privacy_agreed: boolean;
     is_overseas_resident?: boolean;
     is_first_time?: boolean;
+    utm_source?: string | null;
+    utm_medium?: string | null;
+    utm_campaign?: string | null;
+    utm_content?: string | null;
+    referrer_url?: string | null;
+    landing_url?: string | null;
   };
 
   if (!aid || !/^\d{6}$/.test(String(aid))) {
@@ -91,6 +97,12 @@ export async function POST(request: NextRequest) {
       is_first_time: is_first_time ?? false,
       status: 'applied',
       challenge_month,
+      utm_source: utm_source ?? null,
+      utm_medium: utm_medium ?? null,
+      utm_campaign: utm_campaign ?? null,
+      utm_content: utm_content ?? null,
+      referrer_url: referrer_url ?? null,
+      landing_url: landing_url ?? null,
     })
     .select('id')
     .single();

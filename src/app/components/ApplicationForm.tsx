@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const classOptions = [
   { label: '베이직반 : 매주 3건 작성 (수익화 콘텐츠 1건 포함)', value: '베이직반' },
@@ -34,11 +34,40 @@ const initialForm: FormState = {
 const inputClass =
   'w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#28B8D1]/30 focus:border-[#28B8D1] transition-all text-sm text-[#1a1a2e] placeholder:text-gray-400';
 
+interface UtmData {
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  utm_content: string | null;
+  referrer_url: string | null;
+  landing_url: string | null;
+}
+
 export default function ApplicationForm() {
   const [form, setForm] = useState<FormState>(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [utmData, setUtmData] = useState<UtmData>({
+    utm_source: null,
+    utm_medium: null,
+    utm_campaign: null,
+    utm_content: null,
+    referrer_url: null,
+    landing_url: null,
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setUtmData({
+      utm_source: params.get('utm_source'),
+      utm_medium: params.get('utm_medium'),
+      utm_campaign: params.get('utm_campaign'),
+      utm_content: params.get('utm_content'),
+      referrer_url: document.referrer || null,
+      landing_url: window.location.href,
+    });
+  }, []);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -86,6 +115,12 @@ export default function ApplicationForm() {
           privacy_agreed: form.agreed,
           is_overseas_resident: form.isOverseas,
           is_first_time: form.isFirstTime,
+          utm_source: utmData.utm_source,
+          utm_medium: utmData.utm_medium,
+          utm_campaign: utmData.utm_campaign,
+          utm_content: utmData.utm_content,
+          referrer_url: utmData.referrer_url,
+          landing_url: utmData.landing_url,
         }),
       });
 
