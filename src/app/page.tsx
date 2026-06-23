@@ -104,7 +104,7 @@ function HeroSection({ isOpen }: { isOpen: boolean }) {
                 href="#benefits"
                 className="inline-flex items-center justify-center border-2 border-gray-200 text-gray-500 px-8 py-4 rounded-full font-semibold text-base hover:border-[#28B8D1] hover:text-[#28B8D1] transition-all duration-200"
               >
-                참여 혜택 보기
+                업그레이드된 혜택 보기
               </a>
             </div>
           </div>
@@ -350,20 +350,16 @@ function BenefitsSection() {
     {
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-        </svg>
-      ),
-      title: '전용 단톡방 운영',
-      desc: '블로그 관련 고민은 단톡방에서 해결하세요. 혼자 고민하는 시간을 줄여드릴게요.',
-    },
-    {
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
         </svg>
       ),
       title: '피드백 강의 2회 진행',
-      desc: '피드백 강의를 통해 내 글을 개선해 나가요.',
+      desc: (
+        <>
+          <span className="block">1주차 : 5월 웨비나 연사 망고님 진행 강의</span>
+          <span className="block">2주차 : 피드백 강의</span>
+        </>
+      ),
     },
     {
       icon: (
@@ -373,6 +369,15 @@ function BenefitsSection() {
       ),
       title: '수익화 자료 업데이트',
       desc: '수익화 글쓰기 기초부터 실전팁까지 모두 업데이트 되었습니다.',
+    },
+    {
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+      ),
+      title: '전용 단톡방 운영',
+      desc: '블로그 관련 고민은 단톡방에서 해결하세요. 혼자 고민하는 시간을 줄여드릴게요.',
     },
   ];
 
