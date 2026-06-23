@@ -37,20 +37,11 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 // ─── Hero ──────────────────────────────────────────────────────────
 function HeroSection({ isOpen }: { isOpen: boolean }) {
   const infoItems: { icon: string; label: string; value: React.ReactNode }[] = [
-    { icon: '⏰', label: '모집 마감', value: '2026.05.31(일) 23:59까지 (추가모집 없음)' },
-    { icon: '📅', label: '진행 기간', value: '2026.06.01~06.21' },
+    { icon: '⏰', label: '모집 일정', value: '~6/28(일) 23:59까지 (추가모집 없음)' },
+    { icon: '📅', label: '운영 일정', value: '2026. 06. 29(월) ~ 07. 19(일)' },
     { icon: '🗓', label: '기간', value: '총 3주' },
-    {
-      icon: '💰',
-      label: '참가비',
-      value: (
-        <>
-          1만원{' '}
-          <span className="text-red-500 text-xs font-normal">(7월 모집부터 인상 예정)</span>
-        </>
-      ),
-    },
-    { icon: '🎁', label: '완주 혜택', value: '참가비 100% 리워드로 환급' },
+    { icon: '💰', label: '참가비', value: '3만원' },
+    { icon: '🎁', label: '완주 혜택', value: '참가비 100% 리워드 환급' },
   ];
 
   const avatarColors = ['bg-[#28B8D1]', 'bg-[#FF7789]', 'bg-purple-400', 'bg-amber-400'];
@@ -93,7 +84,7 @@ function HeroSection({ isOpen }: { isOpen: boolean }) {
               <div>
                 <p className="text-sm font-semibold text-gray-600">
                   누적 참여자{' '}
-                  <span className="text-[#28B8D1] font-bold">1,500명+</span>
+                  <span className="text-[#28B8D1] font-bold">1,800명+</span>
                 </p>
                 <p className="text-xs text-gray-400">이미 많은 분들이 함께하고 있어요</p>
               </div>
@@ -120,7 +111,7 @@ function HeroSection({ isOpen }: { isOpen: boolean }) {
           <div className="flex justify-center lg:justify-end">
             <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 sm:p-8 w-full max-w-sm">
               <div className="flex items-center justify-between mb-6">
-                <p className="font-bold text-[#1a1a2e] text-sm">6월 습관챌린지 일정</p>
+                <p className="font-bold text-[#1a1a2e] text-sm">7월 습관챌린지 일정</p>
                 <span
                   className={[
                     'text-xs font-bold px-3 py-1 rounded-full',
@@ -178,7 +169,7 @@ function WhatIsSection() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
         </svg>
       ),
-      text: '매주 정해진 횟수만큼 글을 쓰고 제출하고',
+      text: '매주 블로그 글을 작성하고',
       accent: false,
     },
     {
@@ -187,7 +178,7 @@ function WhatIsSection() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
       ),
-      text: '피드백과 주차별 목표로 방향을 잡고',
+      text: '자료와 강의로 글을 점검하고',
       accent: false,
     },
     {
@@ -196,7 +187,7 @@ function WhatIsSection() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
         </svg>
       ),
-      text: '완주하면 참가비가 리워드로 돌아와요',
+      text: '매주 참가비가 리워드로 돌아와요 (*완주시)',
       accent: true,
     },
   ];
@@ -207,9 +198,7 @@ function WhatIsSection() {
         <div className="text-center mb-12">
           <SectionBadge>습관챌린지란?</SectionBadge>
           <p className="text-2xl sm:text-3xl font-bold text-[#1a1a2e] leading-snug">
-            세시간전 습관챌린지는<br />
-            블로그로 수익화하려는 크리에이터가<br />
-            3주 동안 글쓰기 루틴을 만드는 프로그램이에요.
+            크리에이터 블로그 수익화를 돕는 프로그램
           </p>
         </div>
 
@@ -249,12 +238,12 @@ function TargetSection() {
     {
       num: '01',
       title: '블로그 수익화 시작이 막막한 분',
-      desc: '어떤 글을, 어떻게 써야지 수익화를 할 수 있는지 알고 싶다면 초보자 자료부터 차근차근 따라해 보세요.',
+      desc: '제휴링크를 통한 수익화가 어렵다면 초보자를 위한 글쓰기 자료부터 차근차근 따라해 보세요.',
     },
     {
       num: '02',
       title: '수익이 계속 0원인 분',
-      desc: '콘텐츠 피드백을 통해 어떻게 써야 사람들이 클릭하고 구매하는지 방향을 다시 잡아드립니다.',
+      desc: '피드백 강의와 개별 피드백을 통해 내 글을 점검하고 개선해 보세요.',
     },
     {
       num: '03',
@@ -342,9 +331,9 @@ function ResultsSection() {
 // ─── 혜택 ──────────────────────────────────────────────────────────
 function BenefitsSection() {
   const rewardSteps = [
-    { week: '1주 완주', amount: '10,000원 리워드 지급' },
-    { week: '2주 완주', amount: '10,000원 리워드 지급' },
-    { week: '3주 완주', amount: '10,000원 리워드 지급' },
+    { week: '1주 완주', amount: '10,000원 리워드 환급' },
+    { week: '2주 완주', amount: '10,000원 리워드 환급' },
+    { week: '3주 완주', amount: '10,000원 리워드 환급' },
   ];
 
   const cards = [
@@ -354,8 +343,8 @@ function BenefitsSection() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
       ),
-      title: '막히는 순간, 바로 해결돼요',
-      desc: '글 쓰다 막히면 단톡방에 올리면 돼요. 혼자 끙끙대는 시간이 없어집니다.',
+      title: '전용 단톡방 운영',
+      desc: '블로그 관련 고민은 단톡방에서 해결하세요. 혼자 고민하는 시간을 줄여드릴게요.',
     },
     {
       icon: (
@@ -363,8 +352,8 @@ function BenefitsSection() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
         </svg>
       ),
-      title: '내 글이 맞는 방향인지 매주 확인해요',
-      desc: '잘 쓰고 있는 건지 확신이 없어도 괜찮아요. 피드백 게시판에서 매주 방향을 잡아드려요.',
+      title: '피드백 강의 2회 진행',
+      desc: '피드백 강의를 통해 내 글을 개선해 나가요.',
     },
     {
       icon: (
@@ -372,8 +361,8 @@ function BenefitsSection() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
         </svg>
       ),
-      title: '초보도 따라올 수 있는 자료가 다 있어요',
-      desc: '수익화 글쓰기 기초부터 실전 팁까지, 챌린지 전용 자료와 강의로 제공돼요. 뭘 써야 할지 몰라도 시작할 수 있어요.',
+      title: '수익화 자료 업데이트',
+      desc: '수익화 글쓰기 기초부터 실전팁까지 모두 업데이트 되었습니다.',
     },
   ];
 
@@ -431,7 +420,7 @@ function BenefitsSection() {
           <div className="space-y-1.5">
             <p className="flex items-start gap-2 text-sm text-gray-500">
               <span className="w-1.5 h-1.5 rounded-full bg-[#FF7789]/50 mt-1.5 flex-shrink-0" />
-              완주 못 한 주는 리워드가 지급되지 않아요. 그게 매주 쓰게 만드는 이유가 됩니다.
+              완주 못 한 주는 리워드가 환급되지 않아요. 그게 매주 쓰게 만드는 이유가 됩니다.
             </p>
             <p className="flex items-start gap-2 text-sm text-gray-500">
               <span className="w-1.5 h-1.5 rounded-full bg-[#FF7789]/50 mt-1.5 flex-shrink-0" />
@@ -462,7 +451,7 @@ function BenefitsSection() {
             href="#apply"
             className="inline-flex items-center justify-center bg-[#FF7789] text-white px-10 py-4 rounded-full font-bold text-base hover:bg-[#ff5f72] transition-all duration-200 shadow-lg shadow-[#FF7789]/25"
           >
-            지금 신청하고 리워드 받기 →
+            마감 전에 신청하기 →
           </a>
         </div>
 
@@ -477,12 +466,12 @@ function HowToSection() {
     {
       num: '1',
       title: '블로그 글 발행',
-      desc: '내 블로그에 기존에 내가 쓰던 주제로 블로그 글을 작성하고 제출해 주세요.',
+      desc: '매주 3건 혹은 5건 내가 쓸 수 있는 목표를 설정하고 그만큼 작성하면 됩니다. 글 주제는 체험단, 리빙, 맛집, 여행 모두 가능해요.',
     },
     {
       num: '2',
       title: '주 1회 수익화 콘텐츠 작성',
-      desc: '일주일에 딱 한 번, 수익화 글 하나만 쓰면 됩니다. 그 외에는 체험단, 일상, 정보성 글 등 자유롭게 작성할 수 있어요.',
+      desc: "일주일에 1건은 '세시간전 제휴링크'가 포함된 글을 작성해 주세요.",
     },
   ];
 
@@ -491,7 +480,7 @@ function HowToSection() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-14">
           <SectionBadge>진행 방식</SectionBadge>
-          <SectionTitle>3주 동안 딱 이것만 하면 돼요.</SectionTitle>
+          <SectionTitle>3주 동안 딱 이것만 하면 돼요</SectionTitle>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -589,7 +578,7 @@ function ReviewsSection() {
             href="#apply"
             className="inline-flex items-center justify-center bg-[#FF7789] text-white px-10 py-4 rounded-full font-bold text-base hover:bg-[#ff5f72] transition-all duration-200 shadow-lg shadow-[#FF7789]/25"
           >
-            6월 습관챌린지 참여하기 →
+            7월 습관챌린지 참여하기 →
           </a>
           <p className="text-sm text-gray-400">
             참여자들이 자주 묻는 질문은 아래{' '}
