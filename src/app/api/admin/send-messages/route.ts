@@ -224,13 +224,15 @@ async function sendOneEmail(
     await logMessageSend({ ...logBase, status: 'failed', error_message: '이메일 본문 없음' });
     return 'failed';
   }
+  if (!template.title?.trim()) {
+    await logMessageSend({ ...logBase, status: 'failed', error_message: '이메일 제목(title)이 없습니다' });
+    return 'failed';
+  }
 
   const vars = buildApplicantVarsMap(applicant);
   const bodyText = substituteEmailVariables(template.body, vars);
-  const subject = template.title
-    ? substituteEmailVariables(template.title, vars)
-    : '[세시간전] 습관챌린지 안내';
-  const html = buildHtmlFromTemplateBody(bodyText);
+  const subject = substituteEmailVariables(template.title, vars);
+  const html = buildHtmlFromTemplateBody(bodyText, subject);
 
   const result = await sendEmail({ to: applicant.email, subject, html, text: bodyText });
 

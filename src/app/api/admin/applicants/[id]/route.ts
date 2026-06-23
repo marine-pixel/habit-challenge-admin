@@ -104,3 +104,44 @@ export async function PATCH(
     return Response.json({ error: e instanceof Error ? e.message : '서버 오류' }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const supabase = adminClient();
+
+    // 신청자 존재 확인
+    const { data: existing, error: findError } = await supabase
+      .from('applicants')
+      .select('id')
+      .eq('id', id)
+      .single();
+
+    if (findError || !existing) {
+      return Response.json({ error: '신청자를 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    // message_logs의 applicant_id를 null 처리 (발송 로그 보존)
+    await supabase
+      .from('message_logs')
+      .update({ applicant_id: null })
+      .eq('applicant_id', id);
+
+    // 신청자 삭제
+    const { error: deleteError } = await supabase
+      .from('applicants')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      return Response.json({ error: deleteError.message }, { status: 500 });
+    }
+
+    return Response.json({ success: true });
+  } catch (e) {
+    return Response.json({ error: e instanceof Error ? e.message : '서버 오류' }, { status: 500 });
+  }
+}

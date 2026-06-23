@@ -169,7 +169,8 @@ function WhatIsSection() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
         </svg>
       ),
-      text: '매주 블로그 글을 작성하고',
+      title: '매주 목표한 만큼 글을 작성해요',
+      desc: '베이직반은 주 3건, 부스터반은 주 5건. 내 상황에 맞는 목표로 시작할 수 있어요.',
       accent: false,
     },
     {
@@ -178,7 +179,8 @@ function WhatIsSection() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
       ),
-      text: '자료와 강의로 글을 점검하고',
+      title: '자료와 강의로 글을 점검해요',
+      desc: '수익화 글쓰기 자료와 피드백 강의를 통해 내 글의 부족한 부분을 확인해요.',
       accent: false,
     },
     {
@@ -187,7 +189,8 @@ function WhatIsSection() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
         </svg>
       ),
-      text: '매주 참가비가 리워드로 돌아와요 (*완주시)',
+      title: '완주하면 참가비를 리워드로 환급받아요',
+      desc: '주차별 성공 기준을 달성하면 참가비가 리워드로 돌아와요.',
       accent: true,
     },
   ];
@@ -198,7 +201,7 @@ function WhatIsSection() {
         <div className="text-center mb-10 sm:mb-14">
           <SectionBadge>습관챌린지란?</SectionBadge>
           <p className="text-2xl sm:text-3xl font-bold text-[#1a1a2e] leading-snug">
-            크리에이터 블로그 수익화를 돕는 프로그램
+            블로그 수익화를 꾸준히 이어가도록 돕는 3주 프로그램
           </p>
         </div>
 
@@ -221,9 +224,14 @@ function WhatIsSection() {
               >
                 {pt.icon}
               </div>
-              <p className={`text-base font-semibold leading-snug mt-1.5 ${pt.accent ? 'text-[#FF7789]' : 'text-[#1a1a2e]'}`}>
-                {pt.text}
-              </p>
+              <div className="mt-0.5">
+                <p className={`text-base font-semibold leading-snug ${pt.accent ? 'text-[#FF7789]' : 'text-[#1a1a2e]'}`}>
+                  {pt.title}
+                </p>
+                <p className={`text-sm leading-relaxed mt-2 ${pt.accent ? 'text-[#FF7789]/70' : 'text-gray-500'}`}>
+                  {pt.desc}
+                </p>
+              </div>
             </div>
           ))}
         </div>
@@ -304,7 +312,7 @@ function ResultsSection() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-10 sm:mb-14">
           <SectionBadge>참여 후 변화</SectionBadge>
-          <SectionTitle>3주 뒤 이렇게 달라져 있을거예요.</SectionTitle>
+          <SectionTitle>3주 뒤 이렇게 달라져 있을거예요</SectionTitle>
           <p className="text-gray-500 mt-4 max-w-xl mx-auto text-sm leading-relaxed">
             글이 꾸준히 쌓이고, 그 글이 수익으로 연결되는 기회가 늘어납니다.
           </p>

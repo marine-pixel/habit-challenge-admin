@@ -108,7 +108,7 @@ function buildDisplayLabel(row: StatsBreakdown): string {
 }
 
 export default function AcquisitionPage() {
-  const [monthFilter, setMonthFilter] = useState('all');
+  const [monthFilter, setMonthFilter] = useState<string | null>(null);
   const [sourceFilter, setSourceFilter] = useState('all');
   const [stats, setStats] = useState<AcquisitionStats | null>(null);
   const [utmLinks, setUtmLinks] = useState<UtmLink[]>([]);
@@ -123,6 +123,7 @@ export default function AcquisitionPage() {
   const [copied, setCopied] = useState<string | null>(null);
 
   const fetchStats = useCallback(async () => {
+    if (monthFilter === null) return; // 기본 월이 결정될 때까지 대기
     setLoading(true);
     setFetchError(null);
     try {
@@ -139,13 +140,37 @@ export default function AcquisitionPage() {
       if (!res.ok) throw new Error(data.error ?? '데이터를 불러오지 못했습니다.');
       setStats(data.stats);
       setUtmLinks(data.utm_links);
-      setChallengeMonths(prev => prev.length > 0 ? prev : data.challenge_months);
+      // 모집 설정에서 이미 로드된 월 목록을 유지하면서 병합
+      setChallengeMonths(prev => {
+        const merged = new Set([...prev, ...data.challenge_months]);
+        return [...merged].sort().reverse();
+      });
     } catch (e) {
       setFetchError(e instanceof Error ? e.message : '알 수 없는 오류');
     } finally {
       setLoading(false);
     }
   }, [monthFilter, sourceFilter]);
+
+  // 모집 설정에서 기본 월 및 월 목록 로드
+  useEffect(() => {
+    fetch('/api/admin/recruitment')
+      .then(r => r.json())
+      .then((d: {
+        settings?: Array<{ challenge_month?: string | null }>;
+        activeSettings?: { challenge_month?: string | null };
+      }) => {
+        const months = (d.settings ?? [])
+          .map(s => s.challenge_month)
+          .filter((m): m is string => !!m)
+          .sort().reverse();
+        setChallengeMonths(months);
+        const activeMonth = d.activeSettings?.challenge_month ?? null;
+        const defaultMonth = activeMonth ?? months[0] ?? 'all';
+        setMonthFilter(defaultMonth);
+      })
+      .catch(() => setMonthFilter('all'));
+  }, []);
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
@@ -233,7 +258,7 @@ export default function AcquisitionPage() {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4">
             <div className="flex flex-wrap gap-3">
               <select
-                value={monthFilter}
+                value={monthFilter ?? 'all'}
                 onChange={e => setMonthFilter(e.target.value)}
                 className="border border-[#28B8D1]/40 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#28B8D1] bg-[#28B8D1]/5 text-[#28B8D1] font-medium"
               >
@@ -279,7 +304,7 @@ export default function AcquisitionPage() {
                 { label: '전체 신청자 수', value: stats.grand_total, color: 'text-[#1a1a2e]', dot: 'bg-gray-300', sub: '전체 기간' },
                 { label: 'UTM 있는 신청자', value: stats.with_utm, color: 'text-[#28B8D1]', dot: 'bg-[#28B8D1]', sub: '현재 필터 기준' },
                 { label: '출처 없음', value: stats.without_utm, color: 'text-gray-400', dot: 'bg-gray-300', sub: '현재 필터 기준' },
-                { label: '선택 월 기준', value: stats.total, color: 'text-purple-600', dot: 'bg-purple-400', sub: monthFilter === 'all' ? '전체 월' : formatChallengeMonth(monthFilter) },
+                { label: '선택 월 기준', value: stats.total, color: 'text-purple-600', dot: 'bg-purple-400', sub: (!monthFilter || monthFilter === 'all') ? '전체 월' : formatChallengeMonth(monthFilter) },
               ].map(({ label, value, color, dot, sub }) => (
                 <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex flex-col gap-1">
                   <div className="flex items-center gap-1.5">
@@ -355,7 +380,7 @@ export default function AcquisitionPage() {
             )}
             {stats && (
               <div className="px-5 py-3 border-t border-gray-50 text-xs text-gray-400">
-                {stats.breakdown.length}개 유입 경로 · 현재 필터 기준 {stats.total}명
+                {stats.breakdown.length}개 유입 경로 · {(!monthFilter || monthFilter === 'all') ? '전체' : formatChallengeMonth(monthFilter)} 기준 {stats.total}명
               </div>
             )}
           </div>

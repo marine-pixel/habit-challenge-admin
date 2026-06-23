@@ -110,13 +110,18 @@ export default function ApplicantsPage() {
   const [classFilter, setClassFilter] = useState('all');
   const [overseasFilter, setOverseasFilter] = useState<'all' | 'yes' | 'no'>('all');
   const [firstTimeFilter, setFirstTimeFilter] = useState<'all' | 'yes' | 'no'>('all');
-  const [challengeMonthFilter, setChallengeMonthFilter] = useState('all');
+  const [challengeMonthFilter, setChallengeMonthFilter] = useState<string | null>(null);
   const [sourceFilter, setSourceFilter] = useState('all');
   const [showDuplicates, setShowDuplicates] = useState(false);
 
   // Recruitment months from settings (for filter and form default)
   const [recruitmentMonths, setRecruitmentMonths] = useState<string[]>([]);
   const [currentRecruitmentMonth, setCurrentRecruitmentMonth] = useState('');
+
+  // Delete confirmation
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Selection + bulk actions
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -160,19 +165,20 @@ export default function ApplicantsPage() {
         settings?: Array<{ challenge_month?: string | null }>;
         activeSettings?: { challenge_month?: string | null };
       }) => {
-        // 모든 모집 회차의 challenge_month 목록
         const months = (d.settings ?? [])
           .map(s => s.challenge_month)
           .filter((m): m is string => !!m);
         setRecruitmentMonths(months);
-        // 신청자 추가 폼 기본값: 현재 활성 모집 월, 없으면 가장 최신 월
-        if (d.activeSettings?.challenge_month) {
-          setCurrentRecruitmentMonth(d.activeSettings.challenge_month);
-        } else if (months.length > 0) {
-          setCurrentRecruitmentMonth([...months].sort().reverse()[0]);
-        }
+        const sorted = [...months].sort().reverse();
+        const activeMonth = d.activeSettings?.challenge_month ?? null;
+        const latestMonth = sorted[0] ?? null;
+        const defaultMonth = activeMonth ?? latestMonth ?? 'all';
+        // 신청자 추가 폼 기본값
+        setCurrentRecruitmentMonth(defaultMonth !== 'all' ? defaultMonth : (sorted[0] ?? ''));
+        // 월 필터 기본값: 현재 모집월 (없으면 가장 최신, 그래도 없으면 전체)
+        setChallengeMonthFilter(defaultMonth);
       })
-      .catch(() => {});
+      .catch(() => setChallengeMonthFilter('all'));
   }, []);
 
   // ── Derived state ────────────────────────────────────────────────────────
@@ -186,13 +192,19 @@ export default function ApplicantsPage() {
     );
   }, [applicants]);
 
+  // 상단 통계 카드는 월 필터 기준으로만 집계
+  const monthFilteredApplicants = useMemo(() => {
+    if (!challengeMonthFilter || challengeMonthFilter === 'all') return applicants;
+    return applicants.filter(a => a.challenge_month === challengeMonthFilter);
+  }, [applicants, challengeMonthFilter]);
+
   const summary = useMemo(() => ({
-    total: applicants.length,
-    applied: applicants.filter(a => a.status === 'applied').length,
-    paid: applicants.filter(a => a.status === 'paid').length,
-    cancelled: applicants.filter(a => a.status === 'cancelled').length,
+    total: monthFilteredApplicants.length,
+    applied: monthFilteredApplicants.filter(a => a.status === 'applied').length,
+    paid: monthFilteredApplicants.filter(a => a.status === 'paid').length,
+    cancelled: monthFilteredApplicants.filter(a => a.status === 'cancelled').length,
     duplicates: duplicateAids.size,
-  }), [applicants, duplicateAids]);
+  }), [monthFilteredApplicants, duplicateAids]);
 
   // 모집 설정에 등록된 월 + 기존 신청자 데이터의 월 (정렬: 최신순)
   const availableMonths = useMemo(() => {
@@ -229,7 +241,7 @@ export default function ApplicantsPage() {
       firstTimeFilter === 'yes' ? a.is_first_time === true : !a.is_first_time
     );
 
-    if (challengeMonthFilter !== 'all') list = list.filter(a => a.challenge_month === challengeMonthFilter);
+    if (challengeMonthFilter !== null && challengeMonthFilter !== 'all') list = list.filter(a => a.challenge_month === challengeMonthFilter);
 
     if (sourceFilter !== 'all') {
       if (sourceFilter === 'none') {
@@ -368,6 +380,25 @@ export default function ApplicantsPage() {
     }
   };
 
+  // ── Delete ───────────────────────────────────────────────────────────────
+  const handleDelete = async (id: string) => {
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/admin/applicants/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(err.error ?? '삭제 실패');
+      }
+      setDeleteConfirmId(null);
+      await fetchData();
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : '알 수 없는 오류');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   // ── Modal ────────────────────────────────────────────────────────────────
   const openAdd = () => {
     setFormValues({ ...EMPTY_FORM, challenge_month: currentRecruitmentMonth });
@@ -482,7 +513,7 @@ export default function ApplicantsPage() {
   const aidWarning = formValues.aid !== '' && !/^\d{6}$/.test(formValues.aid);
 
   // ── Loading / error states ────────────────────────────────────────────────
-  if (loading) {
+  if (loading || challengeMonthFilter === null) {
     return (
       <div className="min-h-screen bg-[#F2F2F7] flex items-center justify-center">
         <div className="text-center">
@@ -538,6 +569,11 @@ export default function ApplicantsPage() {
         </div>
 
         {/* ── Summary Cards ── */}
+        <p className="text-xs text-gray-400 mb-2 font-medium">
+          {challengeMonthFilter === 'all'
+            ? '전체 기간 기준 집계'
+            : `${formatChallengeMonth(challengeMonthFilter)} 기준 집계`}
+        </p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
           {[
             { label: '전체 신청자', value: summary.total, color: 'text-[#1a1a2e]', dot: 'bg-gray-300' },
@@ -563,7 +599,7 @@ export default function ApplicantsPage() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4">
           <div className="flex flex-wrap gap-3">
             <select
-              value={challengeMonthFilter}
+              value={challengeMonthFilter ?? 'all'}
               onChange={e => setChallengeMonthFilter(e.target.value)}
               className="border border-[#28B8D1]/40 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#28B8D1] bg-[#28B8D1]/5 text-[#28B8D1] font-medium"
             >
@@ -730,12 +766,13 @@ export default function ApplicantsPage() {
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">유입 출처</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">메모</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">신청일시</th>
+                  <th className="px-3 py-3 w-14" />
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={13} className="text-center py-14 text-gray-300 text-sm">
+                    <td colSpan={14} className="text-center py-14 text-gray-300 text-sm">
                       신청자가 없습니다.
                     </td>
                   </tr>
@@ -875,6 +912,14 @@ export default function ApplicantsPage() {
                         <td className="px-3 py-3 text-gray-400 text-xs">
                           {formatDateTime(a.created_at)}
                         </td>
+                        <td className="px-3 py-2.5">
+                          <button
+                            onClick={() => { setDeleteConfirmId(a.id); setDeleteError(null); }}
+                            className="text-xs px-2 py-1 rounded-lg border border-[#FF7789]/30 text-[#FF7789] hover:bg-[#FF7789]/5 transition-colors whitespace-nowrap"
+                          >
+                            삭제
+                          </button>
+                        </td>
                       </tr>
                     );
                   })
@@ -895,6 +940,52 @@ export default function ApplicantsPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Delete Confirmation Modal ── */}
+      {deleteConfirmId !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+          onClick={e => { if (e.target === e.currentTarget && !deleteLoading) setDeleteConfirmId(null); }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-[#FF7789]/10 flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-[#FF7789]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-bold text-[#1a1a2e] text-base">신청자 삭제</h3>
+                <p className="text-xs text-gray-400 mt-0.5">이 작업은 되돌릴 수 없습니다</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-5 leading-relaxed">
+              이 신청자를 삭제할까요? 삭제 후 복구할 수 없습니다.
+            </p>
+            {deleteError && (
+              <p className="text-xs text-[#FF7789] bg-[#FF7789]/5 rounded-xl px-3 py-2 mb-3">
+                {deleteError}
+              </p>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setDeleteConfirmId(null); setDeleteError(null); }}
+                disabled={deleteLoading}
+                className="flex-1 border border-gray-200 text-gray-500 py-2.5 rounded-xl text-sm font-medium hover:border-gray-300 transition-colors disabled:opacity-50"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => handleDelete(deleteConfirmId)}
+                disabled={deleteLoading}
+                className="flex-1 bg-[#FF7789] text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-[#ff5f72] disabled:opacity-50 transition-colors"
+              >
+                {deleteLoading ? '삭제 중...' : '삭제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Add / Edit Modal ── */}
       {modalMode !== null && (
