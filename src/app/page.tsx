@@ -19,7 +19,7 @@ function SectionBadge({
       : 'bg-[#28B8D1]/10 text-[#28B8D1]';
   return (
     <span
-      className={`inline-flex items-center ${styles} text-xs font-bold px-4 py-1.5 rounded-full mb-5 tracking-wider uppercase`}
+      className={`inline-flex items-center ${styles} text-sm font-bold px-4 py-1.5 rounded-full mb-5 tracking-wider uppercase`}
     >
       {children}
     </span>
@@ -28,7 +28,7 @@ function SectionBadge({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="text-3xl sm:text-4xl font-bold text-[#1a1a2e] leading-tight">
+    <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#1a1a2e] leading-snug">
       {children}
     </h2>
   );
@@ -53,19 +53,19 @@ function HeroSection({ isOpen }: { isOpen: boolean }) {
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#28B8D1]/6 rounded-full blur-3xl -translate-y-1/3 translate-x-1/4 pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#FF7789]/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4 pointer-events-none" />
 
-      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 w-full">
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 w-full">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Left: Copy */}
           <div>
             <SectionBadge>✦ 수익화까지 이어지는 3주 프로그램</SectionBadge>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-bold text-[#1a1a2e] leading-[1.15] mb-6 tracking-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-[#1a1a2e] leading-[1.25] mb-6 tracking-tight">
               꾸준히 글을 쓰면<br />
               수익화 기회도 늘어요
             </h1>
 
-            <p className="text-gray-500 text-base sm:text-lg leading-relaxed mb-8 max-w-lg">
-              3주간 꾸준히 쓰며 루틴을 만들고 수익화 글쓰기 방법도 함께 익혀요.<br />
+            <p className="text-gray-500 text-lg leading-[1.8] mb-8 max-w-lg">
+              3주간 꾸준히 쓰며 루틴을 만들고 수익화 글쓰기 방법도 함께 익혀요.<br className="sm:hidden" />
               수익화 + 블로그 성장, 둘 다 가져가는 3주 챌린지입니다.
             </p>
 
@@ -128,12 +128,12 @@ function HeroSection({ isOpen }: { isOpen: boolean }) {
                 {infoItems.map((item) => (
                   <div
                     key={item.label}
-                    className="flex items-center gap-3 py-3 border-b border-gray-50 last:border-0"
+                    className="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0"
                   >
                     <span className="text-xl w-7 text-center">{item.icon}</span>
                     <div>
                       <p className="text-xs text-gray-400 font-medium">{item.label}</p>
-                      <p className="text-sm font-semibold text-[#1a1a2e]">{item.value}</p>
+                      <p className="text-sm sm:text-base font-medium text-[#1a1a2e]">{item.value}</p>
                     </div>
                   </div>
                 ))}
@@ -143,7 +143,7 @@ function HeroSection({ isOpen }: { isOpen: boolean }) {
                 <a
                   href="#apply"
                   className={[
-                    'block w-full text-center py-3.5 rounded-xl font-bold text-sm transition-colors shadow-md',
+                    'block w-full text-center py-3.5 rounded-xl font-bold text-base transition-colors shadow-md',
                     isOpen
                       ? 'bg-[#FF7789] text-white hover:bg-[#ff5f72] shadow-[#FF7789]/20'
                       : 'bg-gray-100 text-gray-500 hover:bg-gray-200 shadow-gray-200/50',
@@ -193,20 +193,20 @@ function WhatIsSection() {
   ];
 
   return (
-    <section className="py-20 sm:py-24 bg-white">
+    <section className="py-20 sm:py-28 bg-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
+        <div className="text-center mb-10 sm:mb-14">
           <SectionBadge>습관챌린지란?</SectionBadge>
           <p className="text-2xl sm:text-3xl font-bold text-[#1a1a2e] leading-snug">
             크리에이터 블로그 수익화를 돕는 프로그램
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch justify-center gap-4 max-w-3xl mx-auto">
+        <div className="flex flex-col sm:flex-row items-stretch justify-center gap-4 sm:gap-6 max-w-3xl mx-auto">
           {points.map((pt, i) => (
             <div
               key={i}
-              className={`flex-1 flex items-start gap-3 rounded-2xl px-6 py-5 border ${
+              className={`flex-1 flex items-start gap-3 rounded-2xl p-6 border ${
                 pt.accent
                   ? 'bg-[#FF7789]/6 border-[#FF7789]/20'
                   : 'bg-[#28B8D1]/5 border-[#28B8D1]/15'
@@ -221,7 +221,7 @@ function WhatIsSection() {
               >
                 {pt.icon}
               </div>
-              <p className={`text-sm font-semibold leading-snug mt-1.5 ${pt.accent ? 'text-[#FF7789]' : 'text-[#1a1a2e]'}`}>
+              <p className={`text-base font-semibold leading-snug mt-1.5 ${pt.accent ? 'text-[#FF7789]' : 'text-[#1a1a2e]'}`}>
                 {pt.text}
               </p>
             </div>
@@ -253,9 +253,9 @@ function TargetSection() {
   ];
 
   return (
-    <section id="target" className="py-20 sm:py-24 bg-[#F2F2F7]">
+    <section id="target" className="py-20 sm:py-28 bg-[#F2F2F7]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-14">
+        <div className="text-center mb-10 sm:mb-14">
           <SectionBadge>추천 대상</SectionBadge>
           <SectionTitle>아래 중 하나라도 해당된다면, 이 챌린지 잘 맞아요.</SectionTitle>
         </div>
@@ -270,7 +270,7 @@ function TargetSection() {
                 <span className="text-[#28B8D1] text-sm font-bold flex-shrink-0">{t.num}</span>
                 <h3 className="font-bold text-[#1a1a2e] text-lg leading-snug">{t.title}</h3>
               </div>
-              <p className="text-gray-500 text-sm leading-relaxed">{t.desc}</p>
+              <p className="text-gray-500 text-sm leading-[1.8]">{t.desc}</p>
             </div>
           ))}
         </div>
@@ -300,9 +300,9 @@ function ResultsSection() {
   ];
 
   return (
-    <section className="py-20 sm:py-24 bg-white">
+    <section className="py-20 sm:py-28 bg-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-14">
+        <div className="text-center mb-10 sm:mb-14">
           <SectionBadge>참여 후 변화</SectionBadge>
           <SectionTitle>3주 뒤 이렇게 달라져 있을거예요.</SectionTitle>
           <p className="text-gray-500 mt-4 max-w-xl mx-auto text-sm leading-relaxed">
@@ -319,7 +319,7 @@ function ResultsSection() {
               <div className="text-3xl mb-5">{r.icon}</div>
               <div className="w-6 h-0.5 bg-[#28B8D1] mb-4 rounded-full group-hover:w-12 transition-all duration-300" />
               <h3 className="font-bold text-[#1a1a2e] text-lg mb-3">{r.title}</h3>
-              <p className="text-gray-500 text-sm leading-relaxed">{r.desc}</p>
+              <p className="text-gray-500 text-sm leading-[1.8]">{r.desc}</p>
             </div>
           ))}
         </div>
@@ -367,11 +367,11 @@ function BenefitsSection() {
   ];
 
   return (
-    <section id="benefits" className="py-20 sm:py-24 bg-white">
+    <section id="benefits" className="py-20 sm:py-28 bg-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-10 sm:mb-14">
           <SectionBadge color="accent">참여 혜택</SectionBadge>
           <SectionTitle>완주하면, 참가비가 리워드로 돌아와요</SectionTitle>
           <p className="text-gray-500 mt-4 max-w-xl mx-auto text-sm leading-relaxed">
@@ -381,7 +381,7 @@ function BenefitsSection() {
         </div>
 
         {/* 환급 구조 블록 */}
-        <div className="bg-[#FF7789]/6 border border-[#FF7789]/20 rounded-2xl px-7 py-8 mb-8">
+        <div className="bg-[#FF7789]/6 border border-[#FF7789]/20 rounded-2xl p-8 mb-8">
           <div className="flex items-center gap-2.5 mb-6">
             <span className="text-2xl">🎁</span>
             <p className="text-base font-bold text-[#1a1a2e]">참가비 30,000원</p>
@@ -393,7 +393,7 @@ function BenefitsSection() {
               <div key={i} className="flex sm:flex-1 items-center gap-3 sm:gap-0">
                 <div className="flex-1 flex flex-col sm:items-center bg-white rounded-xl border border-[#FF7789]/20 px-5 py-4 shadow-sm">
                   <span className="text-xs font-bold text-[#FF7789] mb-1">{step.week}</span>
-                  <span className="text-sm font-semibold text-[#1a1a2e]">{step.amount}</span>
+                  <span className="text-base font-semibold text-[#1a1a2e]">{step.amount}</span>
                 </div>
                 {i < rewardSteps.length - 1 && (
                   <svg className="w-5 h-5 text-[#FF7789]/40 flex-shrink-0 sm:mx-2 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -411,18 +411,18 @@ function BenefitsSection() {
 
           {/* 강조 문구 */}
           <div className="bg-[#FF7789] rounded-xl px-5 py-3.5 mb-4 text-center">
-            <p className="font-bold text-white text-base">
+            <p className="font-bold text-white text-lg">
               3주 모두 완주 = 30,000원 전액 리워드 환급
             </p>
           </div>
 
           {/* 보조 문구 */}
           <div className="space-y-1.5">
-            <p className="flex items-start gap-2 text-sm text-gray-500">
+            <p className="flex items-start gap-2 text-sm text-gray-500 leading-[1.8]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#FF7789]/50 mt-1.5 flex-shrink-0" />
               완주 못 한 주는 리워드가 환급되지 않아요. 그게 매주 쓰게 만드는 이유가 됩니다.
             </p>
-            <p className="flex items-start gap-2 text-sm text-gray-500">
+            <p className="flex items-start gap-2 text-sm text-gray-500 leading-[1.8]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#FF7789]/50 mt-1.5 flex-shrink-0" />
               매주 완주자에게는 리워드 외에 추가 혜택도 랜덤으로 지급돼요.
             </p>
@@ -440,7 +440,7 @@ function BenefitsSection() {
                 {c.icon}
               </div>
               <h3 className="font-bold text-[#1a1a2e] text-lg mb-3 leading-snug">{c.title}</h3>
-              <p className="text-gray-500 text-sm leading-relaxed">{c.desc}</p>
+              <p className="text-gray-500 text-sm leading-[1.8]">{c.desc}</p>
             </div>
           ))}
         </div>
@@ -476,9 +476,9 @@ function HowToSection() {
   ];
 
   return (
-    <section id="how" className="py-20 sm:py-24 bg-[#F2F2F7]">
+    <section id="how" className="py-20 sm:py-28 bg-[#F2F2F7]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-14">
+        <div className="text-center mb-10 sm:mb-14">
           <SectionBadge>진행 방식</SectionBadge>
           <SectionTitle>3주 동안 딱 이것만 하면 돼요</SectionTitle>
         </div>
@@ -493,7 +493,7 @@ function HowToSection() {
                   </div>
                   <h3 className="font-bold text-[#1a1a2e] text-lg leading-snug">{s.title}</h3>
                 </div>
-                <p className="text-gray-400 text-sm leading-relaxed">{s.desc}</p>
+                <p className="text-gray-400 text-base leading-[1.8]">{s.desc}</p>
               </div>
               {i < steps.length - 1 && (
                 <div className="hidden sm:block absolute top-1/2 -right-2 -translate-y-1/2 z-10">
@@ -542,9 +542,9 @@ function ReviewsSection() {
   const dotColors = ['bg-[#28B8D1]', 'bg-[#FF7789]', 'bg-purple-400', 'bg-amber-400'];
 
   return (
-    <section id="reviews" className="py-20 sm:py-24 bg-[#F2F2F7]">
+    <section id="reviews" className="py-20 sm:py-28 bg-[#F2F2F7]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-14">
+        <div className="text-center mb-10 sm:mb-14">
           <SectionBadge>참여자 후기</SectionBadge>
           <SectionTitle>참여 후 이렇게 달라졌어요</SectionTitle>
         </div>
@@ -555,7 +555,7 @@ function ReviewsSection() {
               key={i}
               className="bg-white rounded-2xl border border-gray-100 shadow-sm p-7 hover:shadow-md transition-shadow duration-200"
             >
-              <p className="text-[#1a1a2e] text-sm leading-relaxed mb-5 font-medium">
+              <p className="text-[#1a1a2e] text-sm leading-[1.9] mb-5 font-medium">
                 &ldquo;{r.text}&rdquo;
               </p>
               <div className="flex items-center gap-2.5">
