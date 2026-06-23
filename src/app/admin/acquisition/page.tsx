@@ -135,12 +135,14 @@ export default function AcquisitionPage() {
         stats: AcquisitionStats;
         utm_links: UtmLink[];
         challenge_months: string[];
+        active_month: string | null;
+        latest_applicant_month: string | null;
         error?: string;
       };
       if (!res.ok) throw new Error(data.error ?? '데이터를 불러오지 못했습니다.');
       setStats(data.stats);
       setUtmLinks(data.utm_links);
-      // 모집 설정에서 이미 로드된 월 목록을 유지하면서 병합
+      // 모집 설정 + 실제 신청자 월을 병합해 드롭다운 목록 갱신
       setChallengeMonths(prev => {
         const merged = new Set([...prev, ...data.challenge_months]);
         return [...merged].sort().reverse();
@@ -153,6 +155,7 @@ export default function AcquisitionPage() {
   }, [monthFilter, sourceFilter]);
 
   // 모집 설정에서 기본 월 및 월 목록 로드
+  // 기본값 결정 순서: 1) 활성 모집 월 → 2) 최신 모집 설정 월 → 3) 신청자 최신 월 (fetchStats 후 병합) → 4) 전체
   useEffect(() => {
     fetch('/api/admin/recruitment')
       .then(r => r.json())
@@ -301,10 +304,16 @@ export default function AcquisitionPage() {
           {stats && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
               {[
-                { label: '전체 신청자 수', value: stats.grand_total, color: 'text-[#1a1a2e]', dot: 'bg-gray-300', sub: '전체 기간' },
-                { label: 'UTM 있는 신청자', value: stats.with_utm, color: 'text-[#28B8D1]', dot: 'bg-[#28B8D1]', sub: '현재 필터 기준' },
-                { label: '출처 없음', value: stats.without_utm, color: 'text-gray-400', dot: 'bg-gray-300', sub: '현재 필터 기준' },
-                { label: '선택 월 기준', value: stats.total, color: 'text-purple-600', dot: 'bg-purple-400', sub: (!monthFilter || monthFilter === 'all') ? '전체 월' : formatChallengeMonth(monthFilter) },
+                {
+                  label: '신청자 수',
+                  value: stats.total,
+                  color: 'text-[#1a1a2e]',
+                  dot: 'bg-gray-300',
+                  sub: (!monthFilter || monthFilter === 'all') ? '전체 기간' : formatChallengeMonth(monthFilter),
+                },
+                { label: 'UTM 있는 신청자', value: stats.with_utm, color: 'text-[#28B8D1]', dot: 'bg-[#28B8D1]', sub: '유입 경로 있음' },
+                { label: '출처 없음', value: stats.without_utm, color: 'text-gray-400', dot: 'bg-gray-300', sub: '직접 방문 추정' },
+                { label: '전체 누적 신청자', value: stats.grand_total, color: 'text-purple-600', dot: 'bg-purple-400', sub: '전체 기간 누적' },
               ].map(({ label, value, color, dot, sub }) => (
                 <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex flex-col gap-1">
                   <div className="flex items-center gap-1.5">

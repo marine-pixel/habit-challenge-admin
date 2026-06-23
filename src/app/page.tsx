@@ -5,6 +5,8 @@ import ApplicationForm from './components/ApplicationForm';
 import NextRecruitmentNotificationForm from './components/NextRecruitmentNotificationForm';
 import { getRecruitmentSettings, isRecruitmentOpen } from '@/lib/recruitment';
 
+export const dynamic = 'force-dynamic';
+
 // ─── Shared helpers ────────────────────────────────────────────────
 function SectionBadge({
   children,

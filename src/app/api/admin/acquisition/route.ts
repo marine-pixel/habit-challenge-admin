@@ -29,6 +29,13 @@ type UtmLink = {
   created_at: string;
 };
 
+type RecruitmentSetting = {
+  challenge_month: string | null;
+  is_open: boolean;
+  open_at: string | null;
+  close_at: string | null;
+};
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -37,37 +44,45 @@ export async function GET(request: NextRequest) {
 
     const supabase = adminClient();
 
-    // Grand total (no filters)
-    const { count: grandTotal } = await supabase
-      .from('applicants')
-      .select('*', { count: 'exact', head: true });
-
-    // Filtered applicants for stats
-    let query = supabase
+    // Filtered applicants for stats (challenge_month + utm_source filters apply)
+    let statsQuery = supabase
       .from('applicants')
       .select('utm_source, utm_medium, utm_campaign, utm_content, challenge_month');
 
     if (challengeMonth && challengeMonth !== 'all') {
-      query = query.eq('challenge_month', challengeMonth);
+      statsQuery = statsQuery.eq('challenge_month', challengeMonth);
     }
     if (utmSource && utmSource !== 'all') {
       if (utmSource === 'none') {
-        query = query.is('utm_source', null);
+        statsQuery = statsQuery.is('utm_source', null);
       } else {
-        query = query.eq('utm_source', utmSource);
+        statsQuery = statsQuery.eq('utm_source', utmSource);
       }
     }
 
-    const [applicantsResult, utmLinksResult, recruitmentResult] = await Promise.all([
-      query,
-      supabase
-        .from('utm_links')
-        .select('*')
-        .order('created_at', { ascending: false }),
+    const [
+      grandTotalResult,
+      applicantsResult,
+      utmLinksResult,
+      recruitmentResult,
+      applicantMonthsResult,
+    ] = await Promise.all([
+      // Grand total: all applicants regardless of filter
+      supabase.from('applicants').select('*', { count: 'exact', head: true }),
+      // Month/source-filtered applicants for stats
+      statsQuery,
+      // UTM links for label matching
+      supabase.from('utm_links').select('*').order('created_at', { ascending: false }),
+      // Recruitment settings: for months list + active month determination
       supabase
         .from('recruitment_settings')
-        .select('challenge_month')
+        .select('challenge_month, is_open, open_at, close_at')
         .order('challenge_month', { ascending: false }),
+      // All applicant challenge_months (distinct) for dropdown
+      supabase
+        .from('applicants')
+        .select('challenge_month')
+        .not('challenge_month', 'is', null),
     ]);
 
     if (applicantsResult.error) {
@@ -76,11 +91,36 @@ export async function GET(request: NextRequest) {
 
     const applicants: ApplicantUtm[] = applicantsResult.data ?? [];
     const utmLinks: UtmLink[] = utmLinksResult.data ?? [];
+    const recruitmentSettings: RecruitmentSetting[] = recruitmentResult.data ?? [];
 
-    const challengeMonths = (recruitmentResult.data ?? [])
+    // 활성 모집 판단: lib/recruitment.ts + api/admin/recruitment 와 동일한 기준
+    const now = new Date().toISOString();
+    const activeSetting = recruitmentSettings.find(s => {
+      if (!s.is_open) return false;
+      if (!s.challenge_month) return false;
+      if (s.open_at && now < s.open_at) return false;
+      if (s.close_at && now >= s.close_at) return false;
+      return true;
+    });
+    const activeMonth = activeSetting?.challenge_month ?? null;
+
+    // Merge months from recruitment_settings and actual applicants (for dropdown)
+    const recruitmentMonths = recruitmentSettings
       .map(s => s.challenge_month)
       .filter((m): m is string => !!m);
 
+    const applicantMonths = (applicantMonthsResult.data ?? [])
+      .map((a: { challenge_month: string | null }) => a.challenge_month)
+      .filter((m): m is string => !!m);
+
+    const challengeMonths = [...new Set([...recruitmentMonths, ...applicantMonths])]
+      .sort()
+      .reverse();
+
+    // Latest applicant month for step-3 fallback (when no recruitment settings exist)
+    const latestApplicantMonth = challengeMonths.find(m => applicantMonths.includes(m)) ?? null;
+
+    const grandTotal = grandTotalResult.count ?? 0;
     const total = applicants.length;
     const withUtm = applicants.filter(a => a.utm_source !== null).length;
     const withoutUtm = total - withUtm;
@@ -95,7 +135,12 @@ export async function GET(request: NextRequest) {
     }>();
 
     for (const a of applicants) {
-      const key = [a.utm_source ?? '', a.utm_medium ?? '', a.utm_campaign ?? '', a.utm_content ?? ''].join('|');
+      const key = [
+        a.utm_source ?? '',
+        a.utm_medium ?? '',
+        a.utm_campaign ?? '',
+        a.utm_content ?? '',
+      ].join('|');
       const existing = groupMap.get(key);
       if (existing) {
         existing.count++;
@@ -130,7 +175,7 @@ export async function GET(request: NextRequest) {
 
     return Response.json({
       stats: {
-        grand_total: grandTotal ?? 0,
+        grand_total: grandTotal,
         total,
         with_utm: withUtm,
         without_utm: withoutUtm,
@@ -138,6 +183,8 @@ export async function GET(request: NextRequest) {
       },
       utm_links: utmLinks,
       challenge_months: challengeMonths,
+      active_month: activeMonth,
+      latest_applicant_month: latestApplicantMonth,
     });
   } catch (e) {
     return Response.json({ error: e instanceof Error ? e.message : '서버 오류' }, { status: 500 });

@@ -18,7 +18,7 @@ function createSupabaseClient() {
 export async function POST(request: NextRequest) {
   const recruitmentSettings = await getRecruitmentSettings();
   if (!isRecruitmentOpen(recruitmentSettings)) {
-    return Response.json({ error: '현재 모집 기간이 아닙니다.' }, { status: 403 });
+    return Response.json({ error: '현재 모집이 마감되었습니다.' }, { status: 403 });
   }
 
   let body: Record<string, unknown>;
@@ -66,12 +66,16 @@ export async function POST(request: NextRequest) {
   const writing_goal = class_type === '베이직반' ? 3 : 5;
   const personal_goal = 1;
 
-  const challenge_month = (() => {
-    if (recruitmentSettings?.challenge_month) return recruitmentSettings.challenge_month;
-    const ref = recruitmentSettings?.open_at ? new Date(recruitmentSettings.open_at) : new Date();
-    const kst = new Date(ref.getTime() + 9 * 60 * 60 * 1000);
-    return `${kst.getUTCFullYear()}-${String(kst.getUTCMonth() + 1).padStart(2, '0')}`;
-  })();
+  // challenge_month는 신청 날짜가 아닌 현재 활성 모집 설정의 값을 사용합니다.
+  // 예: 7월 습관챌린지 모집 기간(6/21~6/28)에 6월에 신청해도 challenge_month = '2026-07'로 저장
+  // getRecruitmentSettings()가 challenge_month not-null을 보장하지만 TypeScript를 위해 방어적으로 체크
+  const challenge_month = recruitmentSettings?.challenge_month ?? null;
+  if (!challenge_month) {
+    return Response.json(
+      { error: '모집 설정 오류: challenge_month가 설정되지 않았습니다.' },
+      { status: 500 }
+    );
+  }
 
   let supabase: ReturnType<typeof createSupabaseClient>;
   try {

@@ -41,10 +41,11 @@ export async function GET() {
 
     const allSettings: RecruitmentSettings[] = allSettingsResult.data ?? [];
 
-    // 활성 모집 판단: is_open=true && 날짜 범위 내 (updated_at 최신 우선)
+    // 활성 모집 판단: is_open=true && challenge_month 설정됨 && 날짜 범위 내
     const activeSettings =
       allSettings.find((s) => {
         if (!s.is_open) return false;
+        if (!s.challenge_month) return false;
         if (s.open_at && now < s.open_at) return false;
         if (s.close_at && now >= s.close_at) return false;
         return true;

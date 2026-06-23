@@ -23,11 +23,16 @@ export async function getRecruitmentSettings(): Promise<RecruitmentSettings | nu
     const supabase = createSupabaseAdminClient();
     const now = new Date().toISOString();
 
-    // 활성 모집: is_open=true && 날짜 범위 내 (updated_at 최신 우선)
+    // 활성 모집 조건:
+    //   is_open = true
+    //   challenge_month가 설정되어 있어야 함 (신청자 저장 기준)
+    //   open_at이 null이거나 현재 시각 이후
+    //   close_at이 null이거나 현재 시각 이전
     const { data, error } = await supabase
       .from('recruitment_settings')
       .select('*')
       .eq('is_open', true)
+      .not('challenge_month', 'is', null)
       .or(`open_at.is.null,open_at.lte.${now}`)
       .or(`close_at.is.null,close_at.gt.${now}`)
       .order('updated_at', { ascending: false })
@@ -47,6 +52,8 @@ export async function getRecruitmentSettings(): Promise<RecruitmentSettings | nu
 
 export function isRecruitmentOpen(settings: RecruitmentSettings | null): boolean {
   if (!settings || !settings.is_open) return false;
+  // challenge_month가 없으면 모집 설정이 불완전한 것으로 판단
+  if (!settings.challenge_month) return false;
 
   const now = new Date();
 
