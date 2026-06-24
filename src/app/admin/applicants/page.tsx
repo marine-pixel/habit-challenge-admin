@@ -182,14 +182,29 @@ export default function ApplicantsPage() {
   }, []);
 
   // ── Derived state ────────────────────────────────────────────────────────
-  const duplicateAids = useMemo(() => {
-    const counts: Record<string, number> = {};
+  // 같은 challenge_month 안에서 aid 또는 nickname이 중복되는 신청자 id Set
+  const withinMonthDuplicateIds = useMemo(() => {
+    const byMonth: Record<string, Applicant[]> = {};
     for (const a of applicants) {
-      if (a.aid) counts[a.aid] = (counts[a.aid] ?? 0) + 1;
+      const m = a.challenge_month ?? '__none__';
+      (byMonth[m] ??= []).push(a);
     }
-    return new Set(
-      Object.entries(counts).filter(([, n]) => n > 1).map(([aid]) => aid)
-    );
+    const dupIds = new Set<string>();
+    for (const group of Object.values(byMonth)) {
+      const aidMap: Record<string, string[]> = {};
+      const nickMap: Record<string, string[]> = {};
+      for (const a of group) {
+        if (a.aid) (aidMap[a.aid] ??= []).push(a.id);
+        if (a.nickname) (nickMap[a.nickname] ??= []).push(a.id);
+      }
+      for (const ids of Object.values(aidMap)) {
+        if (ids.length > 1) ids.forEach(id => dupIds.add(id));
+      }
+      for (const ids of Object.values(nickMap)) {
+        if (ids.length > 1) ids.forEach(id => dupIds.add(id));
+      }
+    }
+    return dupIds;
   }, [applicants]);
 
   // 상단 통계 카드는 월 필터 기준으로만 집계
@@ -203,8 +218,8 @@ export default function ApplicantsPage() {
     applied: monthFilteredApplicants.filter(a => a.status === 'applied').length,
     paid: monthFilteredApplicants.filter(a => a.status === 'paid').length,
     cancelled: monthFilteredApplicants.filter(a => a.status === 'cancelled').length,
-    duplicates: duplicateAids.size,
-  }), [monthFilteredApplicants, duplicateAids]);
+    duplicates: monthFilteredApplicants.filter(a => withinMonthDuplicateIds.has(a.id)).length,
+  }), [monthFilteredApplicants, withinMonthDuplicateIds]);
 
   // 모집 설정에 등록된 월 + 기존 신청자 데이터의 월 (정렬: 최신순)
   const availableMonths = useMemo(() => {
@@ -218,7 +233,7 @@ export default function ApplicantsPage() {
 
   const filtered = useMemo(() => {
     let list = showDuplicates
-      ? applicants.filter(a => a.aid != null && duplicateAids.has(a.aid))
+      ? applicants.filter(a => withinMonthDuplicateIds.has(a.id))
       : [...applicants];
 
     const q = search.trim().toLowerCase();
@@ -252,7 +267,7 @@ export default function ApplicantsPage() {
     }
 
     return list;
-  }, [applicants, search, statusFilter, classFilter, overseasFilter, firstTimeFilter, challengeMonthFilter, sourceFilter, showDuplicates, duplicateAids]);
+  }, [applicants, search, statusFilter, classFilter, overseasFilter, firstTimeFilter, challengeMonthFilter, sourceFilter, showDuplicates, withinMonthDuplicateIds]);
 
   // ── Selection ────────────────────────────────────────────────────────────
   const allSelected = filtered.length > 0 && selectedIds.size === filtered.length;
@@ -580,7 +595,7 @@ export default function ApplicantsPage() {
             { label: '신청완료', value: summary.applied, color: 'text-[#28B8D1]', dot: 'bg-[#28B8D1]' },
             { label: '입금완료', value: summary.paid, color: 'text-green-600', dot: 'bg-green-500' },
             { label: '취소', value: summary.cancelled, color: 'text-[#FF7789]', dot: 'bg-[#FF7789]' },
-            { label: '중복 AID 의심', value: summary.duplicates, color: 'text-amber-500', dot: 'bg-amber-400' },
+            { label: challengeMonthFilter === 'all' ? '전체 기준 중복 의심' : '월내 중복 의심', value: summary.duplicates, color: 'text-amber-500', dot: 'bg-amber-400' },
           ].map(({ label, value, color, dot }) => (
             <div
               key={label}
@@ -676,7 +691,7 @@ export default function ApplicantsPage() {
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
-              {showDuplicates ? '중복 AID만 보는 중' : '중복 AID만 보기'}
+              {showDuplicates ? '중복 의심만 보는 중' : '중복 의심만 보기'}
             </button>
             <button
               onClick={fetchData}
@@ -778,7 +793,7 @@ export default function ApplicantsPage() {
                   </tr>
                 ) : (
                   filtered.map(a => {
-                    const isDup = a.aid != null && duplicateAids.has(a.aid);
+                    const isDup = withinMonthDuplicateIds.has(a.id);
                     const isSelected = selectedIds.has(a.id);
                     const isUpdating = updatingIds.has(a.id);
                     return (
@@ -808,7 +823,7 @@ export default function ApplicantsPage() {
                             </button>
                             {isDup && (
                               <span className="inline-flex text-[10px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full font-semibold leading-tight">
-                                중복 의심
+                                {challengeMonthFilter === 'all' ? '전체 기준 중복 의심' : '월내 중복 의심'}
                               </span>
                             )}
                           </div>
