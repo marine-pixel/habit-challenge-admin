@@ -26,14 +26,14 @@ export async function PATCH(request: NextRequest) {
 
     const supabase = adminClient();
 
-    // paid로 변경하는 경우, 현재 applied 상태인 대상자만 조회 (알림톡 발송 대상)
+    // paid로 변경하는 경우, 현재 paid가 아닌 대상자만 조회 (첫 paid 전환 시 알림톡 발송)
     let applicantsToNotify: ApplicantForNotification[] = [];
     if (status === 'paid') {
       const { data: current } = await supabase
         .from('applicants')
         .select('id, nickname, aid, email, phone, blog_url, class_type, writing_goal, personal_goal, is_overseas_resident')
         .in('id', ids as string[])
-        .eq('status', 'applied');
+        .neq('status', 'paid');
       applicantsToNotify = (current ?? []) as ApplicantForNotification[];
     }
 
@@ -44,7 +44,7 @@ export async function PATCH(request: NextRequest) {
 
     if (error) return Response.json({ error: error.message }, { status: 500 });
 
-    // 상태 변경 성공 후, applied → paid 대상자에게 시작 메시지 알림톡 + 해외 거주자 이메일 발송
+    // 상태 변경 성공 후, 첫 paid 전환 대상자에게 신청 완료 메시지 알림톡 + 해외 거주자 이메일 발송
     if (applicantsToNotify.length > 0) {
       const alimtalkResults = await Promise.allSettled(
         applicantsToNotify.map((applicant) => sendPaymentCompleteAlimtalk(supabase, applicant))
@@ -53,7 +53,7 @@ export async function PATCH(request: NextRequest) {
         if (result.status === 'rejected') {
           const applicant = applicantsToNotify[index];
           console.error(
-            `[alimtalk] 시작 메시지 알림톡 발송 실패 (id=${applicant?.id ?? 'unknown'}):`,
+            `[alimtalk] 신청 완료 메시지 알림톡 발송 실패 (id=${applicant?.id ?? 'unknown'}):`,
             result.reason instanceof Error ? result.reason.message : result.reason
           );
         }
@@ -68,7 +68,7 @@ export async function PATCH(request: NextRequest) {
           if (result.status === 'rejected') {
             const applicant = overseasApplicants[index];
             console.error(
-              `[email] 시작 안내 이메일 발송 실패 (id=${applicant?.id ?? 'unknown'}):`,
+              `[email] 완료 안내 이메일 발송 실패 (id=${applicant?.id ?? 'unknown'}):`,
               result.reason instanceof Error ? result.reason.message : result.reason
             );
           }

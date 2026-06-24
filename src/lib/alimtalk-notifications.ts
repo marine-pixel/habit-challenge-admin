@@ -97,29 +97,29 @@ export async function getChallengeCompleteTemplate(supabase: any): Promise<Messa
   const templates = await fetchActiveAlimtalkTemplates(supabase);
 
   if (templates.length === 0) {
-    console.warn('[alimtalk] 완료 메시지 템플릿을 찾을 수 없습니다');
+    console.warn('[alimtalk] 신청 완료 메시지 템플릿을 찾을 수 없습니다');
     return null;
   }
 
-  // 입금완료 상태 변경 전용 — "완료 메시지" 템플릿만 사용
+  // 입금완료 상태 변경 전용 — "신청 완료 메시지" 템플릿만 사용
   // "시작 메시지"는 챌린지 시작일 수동 발송용이므로 여기서는 fallback으로 사용하지 않음
-  const selected = templates.find(t => t.name === '완료 메시지' || t.title === '완료 메시지') ?? null;
+  const selected = templates.find(t => t.name === '신청 완료 메시지' || t.title === '신청 완료 메시지') ?? null;
 
   if (!selected) {
-    console.warn('[alimtalk] 완료 메시지 템플릿을 찾을 수 없습니다');
+    console.warn('[alimtalk] 신청 완료 메시지 템플릿을 찾을 수 없습니다');
     return null;
   }
 
   const selectedName = selected.name ?? selected.title ?? '';
   if (selected.solapi_template_code === PAYMENT_REQUEST_TEMPLATE_CODE || selectedName.includes('입금 요청')) {
     console.error(
-      '[alimtalk] 완료 메시지 조회 오류: 입금 요청 템플릿이 선택됨 — 발송 중단',
+      '[alimtalk] 신청 완료 메시지 조회 오류: 입금 요청 템플릿이 선택됨 — 발송 중단',
       { name: selected.name, code: selected.solapi_template_code }
     );
     return null;
   }
 
-  console.log('[alimtalk] 완료 메시지 템플릿 선택:', {
+  console.log('[alimtalk] 신청 완료 메시지 템플릿 선택:', {
     templateName: selected.name ?? selected.title,
     templateCode: selected.solapi_template_code,
   });
@@ -200,7 +200,7 @@ export async function sendPaymentRequestAlimtalk(
     await logMessageSend({
       ...logBase,
       status: 'failed',
-      error_message: '활성 입금 요청 템플릿 없음',
+      error_message: '입금 요청 메시지 템플릿을 찾을 수 없습니다',
     });
     return;
   }
@@ -245,7 +245,7 @@ export async function sendPaymentRequestAlimtalk(
   }
 }
 
-// 입금완료 시 완료 메시지 발송 (완료 메시지 템플릿 우선, fallback: 시작 메시지)
+// 입금완료 시 신청 완료 메시지 발송
 export async function sendPaymentCompleteAlimtalk(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
@@ -257,7 +257,7 @@ export async function sendPaymentCompleteAlimtalk(
     channel: 'alimtalk' as const,
     provider: 'solapi' as const,
     trigger_type: 'payment_marked_paid' as const,
-    template_name: '완료 메시지',
+    template_name: '신청 완료 메시지',
     applicant_id: applicant.id,
     aid: applicant.aid ?? null,
     recipient_name: applicant.nickname ?? null,
@@ -266,7 +266,7 @@ export async function sendPaymentCompleteAlimtalk(
   };
 
   if (!phone) {
-    console.warn(`[alimtalk] 완료 메시지 알림톡: 수신자 전화번호 없음 (id=${applicant.id})`);
+    console.warn(`[alimtalk] 신청 완료 메시지 알림톡: 수신자 전화번호 없음 (id=${applicant.id})`);
     await logMessageSend({ ...logBase, status: 'skipped', error_message: '전화번호 없음' });
     return;
   }
@@ -277,7 +277,7 @@ export async function sendPaymentCompleteAlimtalk(
     await logMessageSend({
       ...logBase,
       status: 'failed',
-      error_message: '활성 완료 메시지 템플릿 없음',
+      error_message: '신청 완료 메시지 템플릿을 찾을 수 없습니다',
     });
     return;
   }
@@ -302,7 +302,7 @@ export async function sendPaymentCompleteAlimtalk(
     });
 
     const maskedPhone = phone.replace(/\D/g, '').replace(/^(\d{3})\d+(\d{4})$/, '$1****$2');
-    console.log(`[alimtalk] 완료 메시지 발송 성공: ${maskedPhone}`);
+    console.log(`[alimtalk] 신청 완료 메시지 발송 성공: ${maskedPhone}`);
     await logMessageSend({
       ...logBase,
       template_code: template.solapi_template_code,
@@ -310,7 +310,7 @@ export async function sendPaymentCompleteAlimtalk(
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error('[alimtalk] 완료 메시지 발송 실패:', message);
+    console.error('[alimtalk] 신청 완료 메시지 발송 실패:', message);
     await logMessageSend({
       ...logBase,
       template_code: template.solapi_template_code,

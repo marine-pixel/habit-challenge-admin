@@ -162,11 +162,11 @@ export default function ApplicationForm() {
               <p className="text-lg font-bold text-[#1a1a2e]">신청이 완료되었습니다!</p>
               <div className="text-sm text-gray-500 leading-relaxed">
                 <p>
-                  <span className="text-red-500 font-medium">참가비 1만원 입금 안내 메세지</span>가 카카오톡으로 발송됩니다.
+                  참가비 3만원 입금 안내 메세지가 카카오톡으로 발송되었습니다.
                 </p>
                 <p>참가비 입금까지 완료되면 참여가 확정됩니다.</p>
                 <p className="mt-3">
-                  <span className="text-red-500 font-medium">입금 확인 안내는 영업일 기준</span>으로 순차 발송됩니다. (주말/공휴일 제외)
+                  입금 확인 안내는 영업일 기준으로 순차 발송됩니다. (주말/공휴일 제외)
                 </p>
               </div>
             </div>

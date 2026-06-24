@@ -83,18 +83,18 @@ export async function PATCH(
 
     if (error) return Response.json({ error: error.message }, { status: 500 });
 
-    // applied에서 paid로 변경된 경우에만 시작 메시지 알림톡 + 해외 거주자 이메일 발송
-    if (previousApplicant?.status === 'applied' && body.status === 'paid') {
+    // paid가 아닌 상태에서 paid로 처음 변경되는 순간에만 신청 완료 메시지 알림톡 + 해외 거주자 이메일 발송
+    if (previousApplicant && previousApplicant.status !== 'paid' && body.status === 'paid') {
       try {
         await sendPaymentCompleteAlimtalk(supabase, previousApplicant);
       } catch (err) {
-        console.error('[alimtalk] 시작 메시지 알림톡 발송 실패:', err instanceof Error ? err.message : err);
+        console.error('[alimtalk] 신청 완료 메시지 알림톡 발송 실패:', err instanceof Error ? err.message : err);
       }
       if (previousApplicant.is_overseas_resident) {
         try {
           await sendStartGuideEmailIfOverseas(supabase, previousApplicant);
         } catch (err) {
-          console.error('[email] 시작 안내 이메일 발송 실패:', err instanceof Error ? err.message : err);
+          console.error('[email] 완료 안내 이메일 발송 실패:', err instanceof Error ? err.message : err);
         }
       }
     }

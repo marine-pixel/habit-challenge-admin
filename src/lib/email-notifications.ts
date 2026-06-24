@@ -146,7 +146,7 @@ export async function sendPaymentRequestEmailIfOverseas(supabase: any, applicant
     await logMessageSend({
       ...logBase,
       status: 'failed',
-      error_message: '이메일 템플릿을 찾을 수 없습니다',
+      error_message: '입금 요청 이메일 템플릿을 찾을 수 없습니다',
       metadata: { template_source: 'missing_template' },
     });
     console.error(`[email] 입금 요청 이메일 템플릿 없음 — 발송 중단 (name="${TEMPLATE_NAME}")`);
@@ -157,7 +157,7 @@ export async function sendPaymentRequestEmailIfOverseas(supabase: any, applicant
     await logMessageSend({
       ...logBase,
       status: 'failed',
-      error_message: '이메일 제목(title)이 없습니다',
+      error_message: '입금 요청 이메일 제목(title)이 없습니다',
       metadata: { template_source: 'missing_template' },
     });
     console.error(`[email] 입금 요청 이메일 title 없음 — 발송 중단`);
@@ -222,7 +222,7 @@ export async function sendStartGuideEmailIfOverseas(supabase: any, applicant: Ap
     await logMessageSend({
       ...logBase,
       status: 'failed',
-      error_message: '이메일 템플릿을 찾을 수 없습니다',
+      error_message: '완료 안내 이메일 템플릿을 찾을 수 없습니다',
       metadata: { template_source: 'missing_template' },
     });
     console.error(`[email] 완료 안내 이메일 템플릿 없음 — 발송 중단 (name="${TEMPLATE_NAME}")`);
@@ -233,7 +233,7 @@ export async function sendStartGuideEmailIfOverseas(supabase: any, applicant: Ap
     await logMessageSend({
       ...logBase,
       status: 'failed',
-      error_message: '이메일 제목(title)이 없습니다',
+      error_message: '완료 안내 이메일 제목(title)이 없습니다',
       metadata: { template_source: 'missing_template' },
     });
     console.error(`[email] 완료 안내 이메일 title 없음 — 발송 중단`);
