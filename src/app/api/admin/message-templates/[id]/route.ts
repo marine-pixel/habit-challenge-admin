@@ -8,6 +8,39 @@ function adminClient() {
   return createClient(url, key);
 }
 
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const supabase = adminClient();
+
+    const { error } = await supabase
+      .from('message_templates')
+      .delete()
+      .eq('id', id);
+
+    if (!error) {
+      return Response.json({ success: true, deleted: true });
+    }
+
+    // FK 제약 오류(23503)인 경우 소프트 삭제로 대체
+    if (error.code === '23503') {
+      const { error: softErr } = await supabase
+        .from('message_templates')
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq('id', id);
+      if (softErr) return Response.json({ error: softErr.message }, { status: 500 });
+      return Response.json({ success: true, deleted: false, message: '발송 기록이 연결되어 있어 미사용 처리되었습니다.' });
+    }
+
+    return Response.json({ error: error.message }, { status: 500 });
+  } catch (e) {
+    return Response.json({ error: e instanceof Error ? e.message : '서버 오류' }, { status: 500 });
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

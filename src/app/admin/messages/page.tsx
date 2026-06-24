@@ -123,11 +123,16 @@ export default function MessagesPage() {
   const [categoryFilter, setCategoryFilter] = useState<'all' | string>('all');
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
   const [modalMode, setModalMode] = useState<'add' | 'edit' | null>(null);
   const [formValues, setFormValues] = useState<FormValues>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -173,8 +178,31 @@ export default function MessagesPage() {
     if (categoryFilter !== 'all') list = list.filter(t => t.message_category === categoryFilter);
     if (activeFilter === 'active') list = list.filter(t => t.is_active);
     if (activeFilter === 'inactive') list = list.filter(t => !t.is_active);
+    list.sort((a, b) => {
+      const cmp = a.name.localeCompare(b.name, 'ko-KR');
+      return sortOrder === 'asc' ? cmp : -cmp;
+    });
     return list;
-  }, [templates, search, channelFilter, categoryFilter, activeFilter]);
+  }, [templates, search, channelFilter, categoryFilter, activeFilter, sortOrder]);
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`"${name}" 템플릿을 삭제하시겠습니까?\n삭제된 템플릿은 복구할 수 없습니다.`)) return;
+    setDeletingId(id);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/admin/message-templates/${id}`, { method: 'DELETE' });
+      const json = await res.json() as { success?: boolean; deleted?: boolean; message?: string; error?: string };
+      if (!res.ok) throw new Error(json.error ?? '삭제 실패');
+      if (json.deleted === false && json.message) {
+        alert(json.message);
+      }
+      await fetchData();
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : '삭제 중 오류가 발생했습니다.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const openAdd = () => {
     setFormValues(EMPTY_FORM);
@@ -406,6 +434,13 @@ export default function MessagesPage() {
               <option value="inactive">미사용</option>
             </select>
             <button
+              onClick={() => setSortOrder(o => o === 'asc' ? 'desc' : 'asc')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-gray-600 text-sm hover:border-[#28B8D1] hover:text-[#28B8D1] transition-colors"
+              title="이름순 정렬"
+            >
+              이름순 {sortOrder === 'asc' ? 'ㄱ→ㅎ' : 'ㅎ→ㄱ'}
+            </button>
+            <button
               onClick={fetchData}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-gray-400 text-sm hover:border-gray-300 hover:text-gray-500 transition-colors"
               title="새로고침"
@@ -431,7 +466,7 @@ export default function MessagesPage() {
                   <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wide">변수</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">사용 여부</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">수정일</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">수정</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">관리</th>
                 </tr>
               </thead>
               <tbody>
@@ -481,12 +516,21 @@ export default function MessagesPage() {
                       </td>
                       <td className="px-4 py-3 text-gray-400 text-xs">{formatDate(t.updated_at)}</td>
                       <td className="px-4 py-3">
-                        <button
-                          onClick={() => openEdit(t)}
-                          className="px-2.5 py-1 text-xs rounded-lg border border-gray-200 text-gray-500 hover:border-[#28B8D1] hover:text-[#28B8D1] transition-colors"
-                        >
-                          수정
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => openEdit(t)}
+                            className="px-2.5 py-1 text-xs rounded-lg border border-gray-200 text-gray-500 hover:border-[#28B8D1] hover:text-[#28B8D1] transition-colors"
+                          >
+                            수정
+                          </button>
+                          <button
+                            onClick={() => handleDelete(t.id, t.name)}
+                            disabled={deletingId === t.id}
+                            className="px-2.5 py-1 text-xs rounded-lg border border-gray-200 text-gray-400 hover:border-[#FF7789] hover:text-[#FF7789] transition-colors disabled:opacity-40"
+                          >
+                            {deletingId === t.id ? '삭제 중' : '삭제'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -494,11 +538,14 @@ export default function MessagesPage() {
               </tbody>
             </table>
           </div>
-          <div className="px-5 py-3 border-t border-gray-50">
+          <div className="px-5 py-3 border-t border-gray-50 flex items-center justify-between gap-3">
             <p className="text-xs text-gray-400">
               {filtered.length}개 표시 중
               {filtered.length !== templates.length && ` (전체 ${templates.length}개)`}
             </p>
+            {deleteError && (
+              <p className="text-xs text-[#FF7789]">삭제 오류: {deleteError}</p>
+            )}
           </div>
         </div>
       </div>
